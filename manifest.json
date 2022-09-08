@@ -1,11 +1,11 @@
 {
-"update_url": "https://clients2.google.com/service/update2/crx",
+  "update_url": "https://clients2.google.com/service/update2/crx",
 
   "manifest_version": 2,
 
   "name": "Force Paster",
 
-  "version": "1.0.0",
+  "version": "1.0.1",
 
   "description": "This extension pastes your text even where it's disabled.",
 
@@ -32,7 +32,7 @@
     "persistent": false
   },
 
-  "permissions": ["tabs","<all_urls>", "storage"],
+  "permissions": ["<all_urls>", "storage"],
 
   "author": "Pratyush Vashisht"
 
