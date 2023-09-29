@@ -11,12 +11,12 @@ document.body.onpaste = function(e) {
     if (isForcePasterEnabled && ["input", "textarea"].indexOf(currEle.tagName.toLowerCase()) !== -1) {
         var currVal = currEle.value;
         var finalVal = "";
-        // // Stop data actually being pasted into div
+
+        // Stop data actually being pasted into div
         e.stopPropagation();
         e.preventDefault();
 
         // Get pasted data via clipboard API
-        
         var clipboardData = e.clipboardData || window.clipboardData || e.originalEvent.clipboardData;
         var pastedData = clipboardData.getData('Text');
         
