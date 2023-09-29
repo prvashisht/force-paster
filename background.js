@@ -20,3 +20,5 @@ chrome.browserAction.onClicked.addListener(function(tab) {
         });
     });
 });
+
+chrome.runtime.setUninstallURL('https://forms.gle/S7xqSYG6xZjcdzwa6');
