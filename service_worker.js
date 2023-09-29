@@ -1,21 +1,21 @@
 var isForcePasterEnabled = false;
 chrome.storage.local.set({'isForcePasterEnabled': false}, function() {
-    chrome.browserAction.setBadgeText({
+    chrome.action.setBadgeText({
         text: "off"
     });
 
-    chrome.browserAction.setBadgeBackgroundColor({
+    chrome.action.setBadgeBackgroundColor({
         color: "#ff0000"
     });
 });
 
-chrome.browserAction.onClicked.addListener(function(tab) { 
+chrome.action.onClicked.addListener(function(tab) { 
     chrome.storage.local.set({'isForcePasterEnabled': !isForcePasterEnabled}, function() {
         isForcePasterEnabled = !isForcePasterEnabled;
-        chrome.browserAction.setBadgeText({
+        chrome.action.setBadgeText({
             text: isForcePasterEnabled ? "on" : "off"
         });
-        chrome.browserAction.setBadgeBackgroundColor({
+        chrome.action.setBadgeBackgroundColor({
             color: isForcePasterEnabled ? "#518c60" : "#ff0000"
         });
     });
