@@ -1,4 +1,4 @@
-var isForcePasterEnabled = false;
+let isForcePasterEnabled = false;
 chrome.storage.local.get(['isForcePasterEnabled'], function(item) {
    isForcePasterEnabled = item.isForcePasterEnabled;
 })
@@ -6,22 +6,38 @@ chrome.storage.onChanged.addListener(function(item) {
     isForcePasterEnabled = item.isForcePasterEnabled.newValue;
 });
 
+let darkModeListener = (isDarkMode) => {
+    chrome.runtime.sendMessage({
+        type: "themeChange",
+        mode: isDarkMode.matches ? 'dark' : 'light',
+    });
+
+}
+// MediaQueryList
+const darkModePreference = window.matchMedia("(prefers-color-scheme: dark)");
+// recommended method for newer browsers: specify event-type as first argument
+darkModePreference.addEventListener("change", darkModeListener);
+// deprecated method for backward compatibility
+darkModePreference.addListener(e => darkModeListener);
+// set icons on initial load
+darkModeListener(darkModePreference);
+
 document.body.onpaste = function(e) {
-    var currEle = document.activeElement;
+    let currEle = document.activeElement;
     if (isForcePasterEnabled && ["input", "textarea"].indexOf(currEle.tagName.toLowerCase()) !== -1) {
-        var currVal = currEle.value;
-        var finalVal = "";
+        let currVal = currEle.value;
+        let finalVal = "";
 
         // Stop data actually being pasted into div
         e.stopPropagation();
         e.preventDefault();
 
         // Get pasted data via clipboard API
-        var clipboardData = e.clipboardData || window.clipboardData || e.originalEvent.clipboardData;
-        var pastedData = clipboardData.getData('Text');
+        let clipboardData = e.clipboardData || window.clipboardData || e.originalEvent.clipboardData;
+        let pastedData = clipboardData.getData('Text');
         
         finalVal = currVal.slice(0, currEle.selectionStart) + pastedData;
-        var caretPos = finalVal.length; //get position to place caret after pasting
+        let caretPos = finalVal.length; //get position to place caret after pasting
         finalVal += currVal.slice(currEle.selectionEnd);
         currEle.value = finalVal;
         setCaretPosition(currEle, caretPos);
@@ -31,7 +47,7 @@ document.body.onpaste = function(e) {
 function setCaretPosition(elem, caretPos) {
     if(elem != null) {
         if(elem.createTextRange) {
-            var range = elem.createTextRange();
+            let range = elem.createTextRange();
             range.move('character', caretPos);
             range.select();
         } else {

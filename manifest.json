@@ -2,12 +2,12 @@
   "manifest_version": 3,
   "name": "Force Paster",
   "version": "2.0.0",
-  "description": "This extension allows you to paste text into input fields that have disabled copy and paste.",
+  "description": "This extension allows you to paste text into input fields in websites that have disabled pasting.",
   "icons": {
-    "16": "icon16.png",
-    "32": "icon32.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
+    "16": "icons/light/icon16.png",
+    "32": "icons/light/icon32.png",
+    "48": "icons/light/icon48.png",
+    "128": "icons/light/icon128.png"
   },
   "content_scripts": [
     {
@@ -31,7 +31,12 @@
   ],
   "author": "Pratyush Vashisht",
   "action": {
-    "default_icon": "icon128.png",
+    "default_icon": {
+      "16": "icons/light/icon16.png",
+      "32": "icons/light/icon32.png",
+      "48": "icons/light/icon48.png",
+      "128": "icons/light/icon128.png"
+    },
     "default_title": "Force the paste"
   },
   "content_security_policy": {}
