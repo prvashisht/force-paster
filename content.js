@@ -25,8 +25,6 @@ document.body.onpaste = function(e) {
         finalVal += currVal.slice(currEle.selectionEnd);
         currEle.value = finalVal;
         setCaretPosition(currEle, caretPos);
-    } else {
-        console.log('please enable the extension or try pasting in a field.');
     }
 };
 

@@ -3,9 +3,11 @@ chrome.storage.local.set({'isForcePasterEnabled': false}, function() {
     chrome.action.setBadgeText({
         text: "off"
     });
-
     chrome.action.setBadgeBackgroundColor({
         color: "#ff0000"
+    });
+    chrome.action.setBadgeTextColor({
+        color: "#ffffff"
     });
 });
 
