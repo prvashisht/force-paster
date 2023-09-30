@@ -34,17 +34,17 @@ document.body.onpaste = function(e) {
 
         // Get pasted data via clipboard API
         let clipboardData = e.clipboardData || window.clipboardData || e.originalEvent.clipboardData;
-        let pastedData = clipboardData.getData('Text');
+        const pastedText = clipboardData.getData('Text');
         
-        finalVal = currVal.slice(0, currEle.selectionStart) + pastedData;
+        finalVal = currVal.slice(0, currEle.selectionStart) + pastedText;
         let caretPos = finalVal.length; //get position to place caret after pasting
         finalVal += currVal.slice(currEle.selectionEnd);
         currEle.value = finalVal;
-        setCaretPosition(currEle, caretPos);
+        setCaretPositionToEndOfPastedText(currEle, caretPos);
     }
 };
 
-function setCaretPosition(elem, caretPos) {
+function setCaretPositionToEndOfPastedText(elem, caretPos) {
     if(elem != null) {
         if(elem.createTextRange) {
             let range = elem.createTextRange();

@@ -1,21 +1,28 @@
-chrome.action.setBadgeTextColor({
-    color: "#fff"
-});
+const BADGE_TEXT_COLOR = "#ffffff",
+BADGE_TEXT_ENABLED = "on",
+BADGE_TEXT_DISABLED = "off",
+BADGE_BG_ENABLED = "#518c60",
+BADGE_BG_DISABLED = "#ff0000";
 
 let isForcePasterEnabled = false;
-let change_icon_settings = (isEnabled) => {
+
+let setExtensionIconToMatchEnabledState = (isEnabled) => {
     isForcePasterEnabled = isEnabled;
-    chrome.action.setBadgeText({ text: isEnabled ? "on" : "off" });
-    chrome.action.setBadgeBackgroundColor({ color: isEnabled ? "#518c60" : "#ff0000" });
+    chrome.action.setBadgeText({ text: isEnabled ? BADGE_TEXT_ENABLED : BADGE_TEXT_DISABLED });
+    chrome.action.setBadgeBackgroundColor({ color: isEnabled ? BADGE_BG_ENABLED : BADGE_BG_DISABLED });
 }
 
+chrome.action.setBadgeTextColor({
+    color: BADGE_TEXT_COLOR
+});
+
 chrome.storage.local.set({ 'isForcePasterEnabled': false }, () => {
-    change_icon_settings(false)
+    setExtensionIconToMatchEnabledState(false)
 });
 
 chrome.action.onClicked.addListener(() => { 
     chrome.storage.local.set({'isForcePasterEnabled': !isForcePasterEnabled}, () => {
-        change_icon_settings(!isForcePasterEnabled);
+        setExtensionIconToMatchEnabledState(!isForcePasterEnabled);
     });
 });
 
