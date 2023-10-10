@@ -38,4 +38,30 @@ chrome.runtime.onMessage.addListener((request) => {
     }
 });
 
-chrome.runtime.setUninstallURL('https://forms.gle/S7xqSYG6xZjcdzwa6');
+chrome.runtime.onInstalled.addListener(installInfo => {
+    let installDate, updateDate;
+    if (installInfo.reason === "install") {
+        installDate = new Date();
+    } else {
+        updateDate = new Date().toISOString();
+    }
+    chrome.runtime.getPlatformInfo(platformInfo => {
+        let debugData = {
+            ...platformInfo,
+            agent: navigator.userAgent,
+            locale: navigator.language,
+            platform: navigator.platform,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        }
+        if (installDate) debugData.installDate = installDate;
+        if (updateDate) debugData.updateDate = updateDate;
+
+        console.log(debugData);
+        const encodedTechnicalDetails = encodeURIComponent(
+            Object.keys(debugData)
+                .map(debugKey => `${debugKey}: ${debugData[debugKey]}`)
+                .join("\n")
+        );
+        chrome.runtime.setUninstallURL(`https://docs.google.com/forms/d/e/1FAIpQLSe_DgFmYp0ODEi2-rwNufV5SAJ4ZTywhf-gAYBSNi5myZn1Lg/viewform?usp=pp_url&entry.375030464=${encodedTechnicalDetails}`);
+    });
+});
