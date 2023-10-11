@@ -4,25 +4,31 @@ BADGE_TEXT_DISABLED = "off",
 BADGE_BG_ENABLED = "#518c60",
 BADGE_BG_DISABLED = "#ff0000";
 
-let isForcePasterEnabled = false;
+let forcePasterSettings = {
+    enabled: false
+};
 
-let setExtensionIconToMatchEnabledState = (isEnabled) => {
-    isForcePasterEnabled = isEnabled;
+let setExtensionIconToMatchEnabledState = isEnabled => {
+    forcePasterSettings.enabled = isEnabled
     chrome.action.setBadgeText({ text: isEnabled ? BADGE_TEXT_ENABLED : BADGE_TEXT_DISABLED });
     chrome.action.setBadgeBackgroundColor({ color: isEnabled ? BADGE_BG_ENABLED : BADGE_BG_DISABLED });
-}
+};
+
+let setExtensionUninstallURL = encodedTechnicalDetails => {
+    chrome.runtime.setUninstallURL(`https://docs.google.com/forms/d/e/1FAIpQLSe_DgFmYp0ODEi2-rwNufV5SAJ4ZTywhf-gAYBSNi5myZn1Lg/viewform?usp=pp_url&entry.375030464=${encodedTechnicalDetails}`);
+};
 
 chrome.action.setBadgeTextColor({
     color: BADGE_TEXT_COLOR
 });
 
-chrome.storage.local.set({ 'isForcePasterEnabled': false }, () => {
-    setExtensionIconToMatchEnabledState(false)
+chrome.storage.local.set({ 'forcepaster': forcePasterSettings }, () => {
+    setExtensionIconToMatchEnabledState(forcePasterSettings.enabled)
 });
 
-chrome.action.onClicked.addListener(() => { 
-    chrome.storage.local.set({'isForcePasterEnabled': !isForcePasterEnabled}, () => {
-        setExtensionIconToMatchEnabledState(!isForcePasterEnabled);
+chrome.action.onClicked.addListener(() => {
+    chrome.storage.local.set({ 'forcepaster': { enabled: !forcePasterSettings.enabled } }, () => {
+        setExtensionIconToMatchEnabledState(!forcePasterSettings.enabled);
     });
 });
 
@@ -57,11 +63,11 @@ chrome.runtime.onInstalled.addListener(installInfo => {
         if (updateDate) debugData.updateDate = updateDate;
 
         console.log(debugData);
-        const encodedTechnicalDetails = encodeURIComponent(
+        const encodedDetails = encodeURIComponent(
             Object.keys(debugData)
                 .map(debugKey => `${debugKey}: ${debugData[debugKey]}`)
                 .join("\n")
         );
-        chrome.runtime.setUninstallURL(`https://docs.google.com/forms/d/e/1FAIpQLSe_DgFmYp0ODEi2-rwNufV5SAJ4ZTywhf-gAYBSNi5myZn1Lg/viewform?usp=pp_url&entry.375030464=${encodedTechnicalDetails}`);
+        setExtensionUninstallURL(encodedDetails);
     });
 });

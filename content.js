@@ -1,9 +1,12 @@
-let isForcePasterEnabled = false;
-chrome.storage.local.get(['isForcePasterEnabled'], function(item) {
-   isForcePasterEnabled = item.isForcePasterEnabled;
+let forcePasterSettings = {
+    enabled: false
+};
+
+chrome.storage.local.get(['forcepaster'], function(item) {
+    forcePasterSettings = item.forcepaster || { enabled: false };
 })
-chrome.storage.onChanged.addListener(function(item) {
-    isForcePasterEnabled = item.isForcePasterEnabled.newValue;
+chrome.storage.onChanged.addListener(function(changes) {
+    forcePasterSettings = changes.forcepaster.newValue || { enabled: false };
 });
 
 let darkModeListener = (isDarkMode) => {
@@ -24,7 +27,7 @@ darkModeListener(darkModePreference);
 
 document.body.onpaste = function(e) {
     let currEle = document.activeElement;
-    if (isForcePasterEnabled && ["input", "textarea"].indexOf(currEle.tagName.toLowerCase()) !== -1) {
+    if (forcePasterSettings.enabled && ["input", "textarea"].indexOf(currEle.tagName.toLowerCase()) !== -1) {
         let currVal = currEle.value;
         let finalVal = "";
 
