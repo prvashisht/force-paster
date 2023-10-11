@@ -5,13 +5,13 @@ BADGE_BG_ENABLED = "#518c60",
 BADGE_BG_DISABLED = "#ff0000";
 
 let forcePasterSettings = {
-    enabled: false
+    isPasteEnabled: false
 };
 
-let saveAndApplyExtensionDetails = ({ enabled }) => {
-    forcePasterSettings.enabled = enabled;
-    chrome.action.setBadgeText({ text: enabled ? BADGE_TEXT_ENABLED : BADGE_TEXT_DISABLED });
-    chrome.action.setBadgeBackgroundColor({ color: enabled ? BADGE_BG_ENABLED : BADGE_BG_DISABLED });
+let saveAndApplyExtensionDetails = ({ isPasteEnabled }) => {
+    forcePasterSettings.isPasteEnabled = isPasteEnabled;
+    chrome.action.setBadgeText({ text: isPasteEnabled ? BADGE_TEXT_ENABLED : BADGE_TEXT_DISABLED });
+    chrome.action.setBadgeBackgroundColor({ color: isPasteEnabled ? BADGE_BG_ENABLED : BADGE_BG_DISABLED });
     chrome.storage.local.set({ 'forcepaster': forcePasterSettings });
 }
 
@@ -20,7 +20,7 @@ let setExtensionUninstallURL = encodedTechnicalDetails => {
 };
 
 chrome.action.onClicked.addListener(() => {
-    saveAndApplyExtensionDetails({ enabled: !forcePasterSettings.enabled });
+    saveAndApplyExtensionDetails({ isPasteEnabled: !forcePasterSettings.isPasteEnabled });
 });
 
 chrome.runtime.onMessage.addListener((request) => {
@@ -53,7 +53,7 @@ chrome.runtime.onInstalled.addListener(installInfo => {
         if (installDate) debugData.installDate = installDate;
         if (updateDate) debugData.updateDate = updateDate;
 
-        saveAndApplyExtensionDetails({ enabled: false });
+        saveAndApplyExtensionDetails({ isPasteEnabled: false });
         chrome.action.setBadgeTextColor({ color: BADGE_TEXT_COLOR });
 
         const encodedDetails = encodeURIComponent(
