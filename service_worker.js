@@ -8,15 +8,24 @@ let forcePasterSettings = {
     isPasteEnabled: false
 };
 
-let saveAndApplyExtensionDetails = ({ isPasteEnabled }) => {
-    forcePasterSettings.isPasteEnabled = isPasteEnabled;
-    chrome.action.setBadgeText({ text: isPasteEnabled ? BADGE_TEXT_ENABLED : BADGE_TEXT_DISABLED });
-    chrome.action.setBadgeBackgroundColor({ color: isPasteEnabled ? BADGE_BG_ENABLED : BADGE_BG_DISABLED });
+let saveAndApplyExtensionDetails = newData => {
+    forcePasterSettings = {
+        ...forcePasterSettings,
+        ...newData,
+    };
     chrome.storage.local.set({ 'forcepaster': forcePasterSettings });
+    setExtensionUninstallURL(forcePasterSettings);
+    chrome.action.setBadgeText({ text: forcePasterSettings.isPasteEnabled ? BADGE_TEXT_ENABLED : BADGE_TEXT_DISABLED });
+    chrome.action.setBadgeBackgroundColor({ color: forcePasterSettings.isPasteEnabled ? BADGE_BG_ENABLED : BADGE_BG_DISABLED });
 }
 
-let setExtensionUninstallURL = encodedTechnicalDetails => {
-    chrome.runtime.setUninstallURL(`https://docs.google.com/forms/d/e/1FAIpQLSe_DgFmYp0ODEi2-rwNufV5SAJ4ZTywhf-gAYBSNi5myZn1Lg/viewform?usp=pp_url&entry.375030464=${encodedTechnicalDetails}`);
+let setExtensionUninstallURL = debugData => {
+    const encodedDebugData = encodeURIComponent(
+        Object.keys(debugData).sort()
+            .map(key => `${key}: ${debugData[key]}`)
+            .join("\n")
+    );
+    chrome.runtime.setUninstallURL(`https://docs.google.com/forms/d/e/1FAIpQLSe_DgFmYp0ODEi2-rwNufV5SAJ4ZTywhf-gAYBSNi5myZn1Lg/viewform?usp=pp_url&entry.375030464=${encodedDebugData}`);
 };
 
 chrome.action.onClicked.addListener(() => {
@@ -25,7 +34,7 @@ chrome.action.onClicked.addListener(() => {
 
 chrome.runtime.onMessage.addListener((request) => {
     if (request.type === "themeChange") {
-        let icon_paths = {
+        const icon_paths = {
             "16": `icons/${request.mode}/icon16.png`,
             "32": `icons/${request.mode}/icon32.png`,
             "48": `icons/${request.mode}/icon48.png`,
@@ -35,32 +44,25 @@ chrome.runtime.onMessage.addListener((request) => {
     }
 });
 
-chrome.runtime.onInstalled.addListener(installInfo => {
+chrome.runtime.onInstalled.addListener(async function(installInfo) {
     let installDate, updateDate;
     if (installInfo.reason === "install") {
-        installDate = new Date();
+        installDate = new Date().toISOString();
     } else {
         updateDate = new Date().toISOString();
     }
-    chrome.runtime.getPlatformInfo(platformInfo => {
-        let debugData = {
-            ...platformInfo,
-            agent: navigator.userAgent,
-            locale: navigator.language,
-            platform: navigator.platform,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        }
-        if (installDate) debugData.installDate = installDate;
-        if (updateDate) debugData.updateDate = updateDate;
-
-        saveAndApplyExtensionDetails({ isPasteEnabled: false });
-        chrome.action.setBadgeTextColor({ color: BADGE_TEXT_COLOR });
-
-        const encodedDetails = encodeURIComponent(
-            Object.keys(debugData)
-                .map(debugKey => `${debugKey}: ${debugData[debugKey]}`)
-                .join("\n")
-        );
-        setExtensionUninstallURL(encodedDetails);
-    });
+    const platformInfo = await chrome.runtime.getPlatformInfo();
+    // let isExtensionPinned = await chrome.action.getUserSettings().isOnToolbar;
+    let debugData = {
+        ...platformInfo,
+        agent: navigator.userAgent,
+        locale: navigator.language,
+        platform: navigator.platform,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        version: chrome.runtime.getManifest().version,
+    }
+    if (installDate) debugData.installDate = installDate;
+    if (updateDate) debugData.updateDate = updateDate;
+    saveAndApplyExtensionDetails({ isPasteEnabled: false, ...debugData });
+    chrome.action.setBadgeTextColor({ color: BADGE_TEXT_COLOR });
 });
