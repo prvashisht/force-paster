@@ -5,7 +5,9 @@ BADGE_BG_ENABLED = "#518c60",
 BADGE_BG_DISABLED = "#ff0000";
 
 let forcePasterSettings = {
-    isPasteEnabled: false
+    isPasteEnabled: false,
+    clickCount: 0,
+    pasteCount: 0,
 };
 
 let saveAndApplyExtensionDetails = newData => {
@@ -29,11 +31,15 @@ let setExtensionUninstallURL = debugData => {
 };
 
 chrome.action.onClicked.addListener(() => {
-    saveAndApplyExtensionDetails({ isPasteEnabled: !forcePasterSettings.isPasteEnabled });
+    saveAndApplyExtensionDetails({
+        isPasteEnabled: !forcePasterSettings.isPasteEnabled,
+        clickCount: forcePasterSettings.clickCount + 1,
+    });
 });
 
-chrome.runtime.onMessage.addListener((request) => {
-    if (request.type === "themeChange") {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    const { type } = request;
+    if (type === "themechange") {
         const icon_paths = {
             "16": `icons/${request.mode}/icon16.png`,
             "32": `icons/${request.mode}/icon32.png`,
@@ -41,10 +47,16 @@ chrome.runtime.onMessage.addListener((request) => {
             "128": `icons/${request.mode}/icon128.png`
         };
         chrome.action.setIcon({path: icon_paths});
+    } else if (type === "onpaste") {
+        saveAndApplyExtensionDetails({
+            pasteCount: forcePasterSettings.pasteCount + 1,
+        });
+        sendResponse({ totalPastes: forcePasterSettings.pasteCount });
     }
+    return true;
 });
 
-chrome.runtime.onInstalled.addListener(async function(installInfo) {
+chrome.runtime.onInstalled.addListener(async installInfo => {
     let installDate, updateDate;
     if (installInfo.reason === "install") {
         installDate = new Date().toISOString();
@@ -63,6 +75,11 @@ chrome.runtime.onInstalled.addListener(async function(installInfo) {
     }
     if (installDate) debugData.installDate = installDate;
     if (updateDate) debugData.updateDate = updateDate;
-    saveAndApplyExtensionDetails({ isPasteEnabled: false, ...debugData });
+    saveAndApplyExtensionDetails({
+        isPasteEnabled: false,
+        clickCount: 0,
+        pasteCount: 0,
+        ...debugData
+    });
     chrome.action.setBadgeTextColor({ color: BADGE_TEXT_COLOR });
 });
