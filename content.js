@@ -1,20 +1,21 @@
 let forcePasterSettings = {
-    isPasteEnabled: false
+    isPasteEnabled: false,
+    clickCount: 0,
+    pasteCount: 0,
 };
 
 chrome.storage.local.get(['forcepaster'], function(item) {
-    forcePasterSettings = item.forcepaster || { isPasteEnabled: false };
+    forcePasterSettings = item.forcepaster || forcePasterSettings;
 })
 chrome.storage.onChanged.addListener(function(changes) {
-    forcePasterSettings = changes.forcepaster.newValue || { isPasteEnabled: false };
+    forcePasterSettings = changes.forcepaster.newValue || forcePasterSettings;
 });
 
 let darkModeListener = (isDarkMode) => {
     chrome.runtime.sendMessage({
-        type: "themeChange",
+        type: "themechange",
         mode: isDarkMode.matches ? 'dark' : 'light',
     });
-
 }
 // MediaQueryList
 const darkModePreference = window.matchMedia("(prefers-color-scheme: dark)");
@@ -25,25 +26,34 @@ darkModePreference.addListener(e => darkModeListener);
 // set icons on initial load
 darkModeListener(darkModePreference);
 
-document.body.onpaste = function(e) {
+const isInputOrTextarea = (currEle) => ["input", "textarea"].includes(currEle.tagName.toLowerCase());
+document.body.onpaste = event => {
     let currEle = document.activeElement;
-    if (forcePasterSettings.isPasteEnabled && ["input", "textarea"].indexOf(currEle.tagName.toLowerCase()) !== -1) {
+    if (forcePasterSettings.isPasteEnabled && isInputOrTextarea(currEle)) {
         let currVal = currEle.value;
         let finalVal = "";
 
         // Stop data actually being pasted into div
-        e.stopPropagation();
-        e.preventDefault();
+        event.stopPropagation();
+        event.preventDefault();
 
         // Get pasted data via clipboard API
-        let clipboardData = e.clipboardData || window.clipboardData || e.originalEvent.clipboardData;
+        let clipboardData = event.clipboardData || window.clipboardData || event.originalEvent.clipboardData;
         const pastedText = clipboardData.getData('Text');
         
         finalVal = currVal.slice(0, currEle.selectionStart) + pastedText;
         let caretPos = finalVal.length; //get position to place caret after pasting
         finalVal += currVal.slice(currEle.selectionEnd);
+        currEle.value = "";
         currEle.value = finalVal;
         setCaretPositionToEndOfPastedText(currEle, caretPos);
+        chrome.runtime.sendMessage({ type: "onpaste" }, response => {
+            if (response.totalPastes > 10) {
+                // TODO: show a dismissible box at the top right of the page
+                // asking users to rate the extension on the webstore if they liked using it
+                // show buttons to proceed, rate never, or rate later.
+            }
+        });
     }
 };
 
