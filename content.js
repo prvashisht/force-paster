@@ -29,7 +29,9 @@ darkModeListener(darkModePreference);
 const isInputOrTextarea = (currEle) => ["input", "textarea"].includes(currEle.tagName.toLowerCase());
 document.body.onpaste = event => {
     let currEle = document.activeElement;
-    if (forcePasterSettings.isPasteEnabled && isInputOrTextarea(currEle)) {
+    if (forcePasterSettings.isPasteEnabled) {
+        chrome.runtime.sendMessage({ type: "onpastestart", on: currEle.tagName.toLowerCase() })
+        if (!isInputOrTextarea(currEle)) return;
         let currVal = currEle.value;
         let finalVal = "";
 
@@ -47,7 +49,7 @@ document.body.onpaste = event => {
         currEle.value = "";
         currEle.value = finalVal;
         setCaretPositionToEndOfPastedText(currEle, caretPos);
-        chrome.runtime.sendMessage({ type: "onpaste" }, response => {
+        chrome.runtime.sendMessage({ type: "onpastecomplete" }, response => {
             if (response.totalPastes > 10) {
                 // TODO: show a dismissible box at the top right of the page
                 // asking users to rate the extension on the webstore if they liked using it

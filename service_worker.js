@@ -38,7 +38,7 @@ chrome.action.onClicked.addListener(() => {
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    const { type } = request;
+    const { type, on } = request;
     if (type === "themechange") {
         const icon_paths = {
             "16": `icons/${request.mode}/icon16.png`,
@@ -47,7 +47,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             "128": `icons/${request.mode}/icon128.png`
         };
         chrome.action.setIcon({path: icon_paths});
-    } else if (type === "onpaste") {
+    } else if (type === "onpastestart") {
+        chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+            saveAndApplyExtensionDetails({
+                pasteStart: forcePasterSettings.pasteCount + 1,
+                lastDomain: (new URL(tabs[0].url)).origin,
+                lastTag: on,
+            });
+        })
+    } else if (type === "onpastecomplete") {
         saveAndApplyExtensionDetails({
             pasteCount: forcePasterSettings.pasteCount + 1,
         });
