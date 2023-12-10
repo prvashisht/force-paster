@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Force Paster",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "description": "This extension allows you to paste text into input fields in websites that have disabled pasting.",
   "icons": {
     "16": "icons/light/icon16.png",
@@ -24,7 +24,8 @@
     "service_worker": "service_worker.js"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "clipboardRead"
   ],
   "host_permissions": [
     "<all_urls>"
