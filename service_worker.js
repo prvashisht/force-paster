@@ -27,7 +27,7 @@ let setExtensionUninstallURL = debugData => {
             .map(key => `${key}: ${debugData[key]}`)
             .join("\n")
     );
-    chrome.runtime.setUninstallURL(`https://docs.google.com/forms/d/e/1FAIpQLSe_DgFmYp0ODEi2-rwNufV5SAJ4ZTywhf-gAYBSNi5myZn1Lg/viewform?usp=pp_url&entry.375030464=${encodedDebugData}`);
+    chrome.runtime.setUninstallURL(`https://pratyushvashisht.com/forcepaster/uninstall?utm_source=chrome&utm_medium=extension&utm_campaign=uninstall&debugData=${encodedDebugData}`);
 };
 
 chrome.action.onClicked.addListener(() => {
