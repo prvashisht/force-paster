@@ -13,7 +13,7 @@ Force Paster is a Chrome extension that enables seamless text pasting in input f
 
 ## Installation
 
-You can install the extension from the [Respective browsers' Web Stores](https://pratyushvashisht.com/forcepaster?utm_medium=github&utm_name=readme) or follow these steps for local development:
+You can install the extension from the [Respective browsers' Web Stores](https://vashis.ht/rd/forcepaster?from=github-readme) or follow these steps for local development:
 
 1. Clone the repository:
 ```
