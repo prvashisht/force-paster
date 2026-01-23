@@ -4,6 +4,8 @@ BADGE_TEXT_DISABLED = "off",
 BADGE_BG_ENABLED = "#518c60",
 BADGE_BG_DISABLED = "#ff0000";
 
+import { sendProxyEvent } from "./analytics.js";
+
 let forcePasterSettings = {
     isPasteEnabled: false,
     clickCount: 0,
@@ -30,14 +32,23 @@ let setExtensionUninstallURL = debugData => {
     chrome.runtime.setUninstallURL(`https://pratyushvashisht.com/forcepaster/uninstall?utm_source=chrome&utm_medium=extension&utm_campaign=uninstall&debugData=${encodedDebugData}`);
 };
 
-chrome.action.onClicked.addListener(() => {
+chrome.action.onClicked.addListener(async () => {
+    const isNextEnabled = !forcePasterSettings.isPasteEnabled;
     saveAndApplyExtensionDetails({
-        isPasteEnabled: !forcePasterSettings.isPasteEnabled,
+        isPasteEnabled: isNextEnabled,
         clickCount: forcePasterSettings.clickCount + 1,
     });
+    try {
+        await sendProxyEvent("fp_toggle", {
+            enabled: isNextEnabled,
+            source: "action_icon"
+        });
+    } catch (e) {
+        console.warn("analytics fp_toggle failed", e);
+    }
 });
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     const { type, on } = request;
     if (type === "themechange") {
         const icon_paths = {
@@ -51,14 +62,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
             saveAndApplyExtensionDetails({
                 pasteStart: forcePasterSettings.pasteCount + 1,
-                lastDomain: (new URL(tabs[0].url)).origin,
+                lastDomain: (new URL(tabs[0].url)).hostname,
                 lastTag: on,
             });
         })
     } else if (type === "onpastecomplete") {
-        saveAndApplyExtensionDetails({
-            pasteCount: forcePasterSettings.pasteCount + 1,
-        });
+        saveAndApplyExtensionDetails({ pasteCount: forcePasterSettings.pasteCount + 1, });
+        try {
+            await sendProxyEvent("fp_paste", {
+                tag: forcePasterSettings.lastTag ?? null,
+                domain: forcePasterSettings.lastDomain ?? null,
+                source: "paste_event"
+            });
+        } catch (e) {
+            console.warn("analytics fp_paste failed", e);
+        }
         sendResponse({ totalPastes: forcePasterSettings.pasteCount });
     }
     return true;
@@ -71,6 +89,13 @@ chrome.runtime.onInstalled.addListener(async installInfo => {
     } else {
         updateDate = new Date().toISOString();
     }
+
+    try {
+        await sendProxyEvent("extension_installed", { reason: installInfo.reason });
+    } catch (e) {
+        console.warn("analytics failed", e);
+    }
+
     const platformInfo = await chrome.runtime.getPlatformInfo();
     // let isExtensionPinned = await chrome.action.getUserSettings().isOnToolbar;
     let debugData = {
