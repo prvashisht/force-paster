@@ -22,6 +22,7 @@
   ],
   "background": {
     "service_worker": "service_worker.js",
+    "scripts": ["service_worker.js"],
     "type": "module"
   },
   "permissions": [
@@ -40,6 +41,5 @@
       "128": "icons/light/icon128.png"
     },
     "default_title": "Force the paste"
-  },
-  "content_security_policy": {}
+  }
 }
