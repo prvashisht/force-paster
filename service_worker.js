@@ -4,7 +4,7 @@ BADGE_TEXT_DISABLED = "off",
 BADGE_BG_ENABLED = "#518c60",
 BADGE_BG_DISABLED = "#ff0000";
 
-import { sendProxyEvent } from "./analytics.js";
+import { sendProxyEvent, TOKEN_STORAGE_KEY, CLIENT_ID_STORAGE_KEY } from "./analytics.js";
 
 let forcePasterSettings = {
     isPasteEnabled: false,
@@ -18,18 +18,37 @@ let saveAndApplyExtensionDetails = newData => {
         ...newData,
     };
     chrome.storage.local.set({ 'forcepaster': forcePasterSettings });
-    setExtensionUninstallURL(forcePasterSettings);
+    setExtensionUninstallURL(forcePasterSettings).catch(e => {
+        console.warn("setExtensionUninstallURL failed", e);
+    });
     chrome.action.setBadgeText({ text: forcePasterSettings.isPasteEnabled ? BADGE_TEXT_ENABLED : BADGE_TEXT_DISABLED });
     chrome.action.setBadgeBackgroundColor({ color: forcePasterSettings.isPasteEnabled ? BADGE_BG_ENABLED : BADGE_BG_DISABLED });
 }
 
-let setExtensionUninstallURL = debugData => {
+let setExtensionUninstallURL = async debugData => {
     const encodedDebugData = encodeURIComponent(
         Object.keys(debugData).sort()
             .map(key => `${key}: ${debugData[key]}`)
             .join("\n")
     );
-    chrome.runtime.setUninstallURL(`https://pratyushvashisht.com/forcepaster/uninstall?utm_source=chrome&utm_medium=extension&utm_campaign=uninstall&debugData=${encodedDebugData}`);
+
+    const storageKeys  = await chrome.storage.local.get([TOKEN_STORAGE_KEY, CLIENT_ID_STORAGE_KEY]);
+    const token = storageKeys[TOKEN_STORAGE_KEY];
+    const clientId = storageKeys[CLIENT_ID_STORAGE_KEY];
+
+    const url = new URL("https://vashis.ht/forcepaster/uninstall");
+    url.searchParams.set("utm_source", "chrome");
+    url.searchParams.set("utm_medium", "extension");
+    url.searchParams.set("utm_campaign", "uninstall");
+    url.searchParams.set("debugData", encodedDebugData);
+
+    const hashedParams = new URLSearchParams();
+    if (token) hashedParams.set("token", token);
+    if (clientId) hashedParams.set("client_id", clientId);
+    url.hash = hashedParams.toString();
+    
+    console.log("Setting uninstall URL:", url.toString());
+    chrome.runtime.setUninstallURL( url.toString() );
 };
 
 chrome.action.onClicked.addListener(async () => {
@@ -90,12 +109,6 @@ chrome.runtime.onInstalled.addListener(async installInfo => {
         updateDate = new Date().toISOString();
     }
 
-    try {
-        await sendProxyEvent("extension_installed", { reason: installInfo.reason });
-    } catch (e) {
-        console.warn("analytics failed", e);
-    }
-
     const platformInfo = await chrome.runtime.getPlatformInfo();
     // let isExtensionPinned = await chrome.action.getUserSettings().isOnToolbar;
     let debugData = {
@@ -108,6 +121,22 @@ chrome.runtime.onInstalled.addListener(async installInfo => {
     }
     if (installDate) debugData.installDate = installDate;
     if (updateDate) debugData.updateDate = updateDate;
+
+    try {
+        await sendProxyEvent(
+            "extension_installed",
+            { reason: installInfo.reason },
+            {
+                userProperties: {
+                    ...debugData,
+                    install_reason: installInfo.reason,
+                    is_fresh_install: installInfo.reason === "install" ? 1 : 0
+                }
+            });
+    } catch (e) {
+        console.warn("analytics failed", e);
+    }
+
     saveAndApplyExtensionDetails({
         isPasteEnabled: false,
         clickCount: 0,

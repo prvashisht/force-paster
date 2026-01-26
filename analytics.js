@@ -1,24 +1,24 @@
 // --- GA Proxy config ---
 const PROXY_BASE_URL = "https://asia-south1-extensions-analytics-prod.cloudfunctions.net/forcepaster-ga-proxy";
-const TOKEN_STORAGE_KEY = "forcepaster_install_token";
-const CLIENT_ID_STORAGE_KEY = "forcepaster_ga_client_id";
+export const TOKEN_STORAGE_KEY = "forcepaster_install_token";
+export const CLIENT_ID_STORAGE_KEY = "forcepaster_ga_client_id";
 const SESSION_STORAGE_KEY = "forcepaster_ga_session";
-
 const SESSION_EXPIRATION_MIN = 30;
 const DEFAULT_ENGAGEMENT_TIME_MS = 100;
+const VALID_CLIENT_ID_RE = /^\d+\.\d+$/;
 
-function randomId() {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
-  return `${hex}.${Math.floor(Date.now() / 1000)}`;
+function randomUint32() {
+  const arr = new Uint32Array(1);
+  crypto.getRandomValues(arr);
+  return (arr[0] >>> 0) || 1;
 }
 
 async function getOrCreateClientId() {
   const result = await chrome.storage.local.get(CLIENT_ID_STORAGE_KEY);
   let clientId = result[CLIENT_ID_STORAGE_KEY];
-  if (!clientId) {
-    clientId = randomId();
+  if (!clientId || !VALID_CLIENT_ID_RE.test(clientId)) {
+    const unixSeconds = Math.floor(Date.now() / 1000);
+    clientId = `${randomUint32()}.${unixSeconds}`;
     await chrome.storage.local.set({ [CLIENT_ID_STORAGE_KEY]: clientId });
   }
   return clientId;
@@ -74,10 +74,11 @@ async function getOrRegisterToken(force = false) {
   return registerInstallToken();
 }
 
-export async function sendProxyEvent(eventName, params = {}, { debug = false } = {}) {
+export async function sendProxyEvent(eventName, params = {}, opts = {}) {
   const client_id = await getOrCreateClientId();
   const session_id = await getOrCreateSessionId();
   const token = await getOrRegisterToken(false);
+  const debug = opts.debug || true;
 
   const payload = {
     client_id,
@@ -88,14 +89,18 @@ export async function sendProxyEvent(eventName, params = {}, { debug = false } =
           session_id,
           engagement_time_msec: DEFAULT_ENGAGEMENT_TIME_MS,
           ext_version: chrome.runtime.getManifest().version,
-          ...params
+          ...params,
         }
       }
     ]
   };
 
+  if (opts.userProperties) {
+    payload.user_properties = toUserProperties(opts.userProperties);
+  }
+
   const url = debug
-    ? `${PROXY_BASE_URL}/v1/collect?debug=1`
+    ? `${PROXY_BASE_URL}/v1/collect?debug_view=1`
     : `${PROXY_BASE_URL}/v1/collect`;
 
   async function doSend(bearerToken) {
@@ -123,4 +128,18 @@ export async function sendProxyEvent(eventName, params = {}, { debug = false } =
   }
 
   return res;
+}
+
+const GA4_PROPERTY_NAME_LIMIT = 24;
+const GA4_PROPERTY_VALUE_LIMIT = 36;
+
+function toUserProperties(obj = {}) {
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === undefined || v === null) continue;
+    const key = String(k).slice(0, GA4_PROPERTY_NAME_LIMIT);
+    const val = String(v).slice(0, GA4_PROPERTY_VALUE_LIMIT);
+    out[key] = { value: val };
+  }
+  return out;
 }

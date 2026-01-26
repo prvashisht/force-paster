@@ -1,6 +1,6 @@
 # Force Paster Chrome Extension
 
-[![Version](https://img.shields.io/badge/Version-2.2.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/Version-2.2.1-blue.svg)]()
 
 Force Paster is a Chrome extension that enables seamless text pasting in input fields and text areas, even on websites that disable pasting. It also supports adaptive theming, making it comfortable for users in both light and dark mode.
 
