@@ -28,7 +28,8 @@
   "permissions": [
     "storage",
     "clipboardRead",
-    "tabs"
+    "tabs",
+    "contextMenus"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -51,6 +52,10 @@
       },
       "description": "Toggle Force Paster on/off"
     }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
   },
   "browser_specific_settings": {
     "gecko": {

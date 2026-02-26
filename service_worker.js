@@ -12,6 +12,14 @@ let forcePasterSettings = {
     pasteCount: 0,
 };
 
+// Restore persisted state on service worker startup and sync the context menu checkbox.
+chrome.storage.local.get(['forcepaster'], (item) => {
+    if (item.forcepaster) {
+        forcePasterSettings = item.forcepaster;
+        chrome.contextMenus.update("toggle", { checked: forcePasterSettings.isPasteEnabled }).catch(() => {});
+    }
+});
+
 let saveAndApplyExtensionDetails = newData => {
     forcePasterSettings = {
         ...forcePasterSettings,
@@ -23,6 +31,7 @@ let saveAndApplyExtensionDetails = newData => {
     });
     chrome.action.setBadgeText({ text: forcePasterSettings.isPasteEnabled ? BADGE_TEXT_ENABLED : BADGE_TEXT_DISABLED });
     chrome.action.setBadgeBackgroundColor({ color: forcePasterSettings.isPasteEnabled ? BADGE_BG_ENABLED : BADGE_BG_DISABLED });
+    chrome.contextMenus.update("toggle", { checked: forcePasterSettings.isPasteEnabled }).catch(() => {});
 }
 
 let setExtensionUninstallURL = async debugData => {
@@ -51,6 +60,19 @@ let setExtensionUninstallURL = async debugData => {
     chrome.runtime.setUninstallURL( url.toString() );
 };
 
+function buildContextMenus() {
+    chrome.contextMenus.removeAll(() => {
+        chrome.contextMenus.create({ id: "toggle", type: "checkbox", title: "Enable Force Paste", contexts: ["action"], checked: forcePasterSettings.isPasteEnabled });
+        chrome.contextMenus.create({ id: "sep1", type: "separator", contexts: ["action"] });
+        chrome.contextMenus.create({ id: "shortcuts", title: "Manage keyboard shortcuts", contexts: ["action"] });
+        chrome.contextMenus.create({ id: "sep2", type: "separator", contexts: ["action"] });
+        chrome.contextMenus.create({ id: "options", title: "Open dashboard", contexts: ["action"] });
+        chrome.contextMenus.create({ id: "sep3", type: "separator", contexts: ["action"] });
+        chrome.contextMenus.create({ id: "rate", title: "⭐  Rate Force Paster", contexts: ["action"] });
+        chrome.contextMenus.create({ id: "bug", title: "🐛  Report a bug", contexts: ["action"] });
+    });
+}
+
 chrome.action.onClicked.addListener(async () => {
     const isNextEnabled = !forcePasterSettings.isPasteEnabled;
     saveAndApplyExtensionDetails({
@@ -64,6 +86,39 @@ chrome.action.onClicked.addListener(async () => {
         });
     } catch (e) {
         console.warn("analytics fp_toggle failed", e);
+    }
+});
+
+chrome.contextMenus.onClicked.addListener(async (info) => {
+    switch (info.menuItemId) {
+        case "toggle": {
+            saveAndApplyExtensionDetails({
+                isPasteEnabled: info.checked,
+                clickCount: forcePasterSettings.clickCount + 1,
+            });
+            try {
+                await sendProxyEvent("fp_toggle", { enabled: info.checked, source: "context_menu" });
+            } catch (e) {
+                console.warn("analytics fp_toggle failed", e);
+            }
+            break;
+        }
+        case "shortcuts":
+            try {
+                await chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
+            } catch {
+                chrome.runtime.openOptionsPage();
+            }
+            break;
+        case "options":
+            chrome.runtime.openOptionsPage();
+            break;
+        case "rate":
+            chrome.tabs.create({ url: "https://vashis.ht/rd/forcepaster?from=extension-context-menu" });
+            break;
+        case "bug":
+            chrome.tabs.create({ url: "https://github.com/prvashisht/force-paster/issues/new" });
+            break;
     }
 });
 
@@ -96,6 +151,17 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             console.warn("analytics fp_paste failed", e);
         }
         sendResponse({ totalPastes: forcePasterSettings.pasteCount });
+    } else if (type === "setenabled") {
+        saveAndApplyExtensionDetails({
+            isPasteEnabled: request.enabled,
+            clickCount: forcePasterSettings.clickCount + 1,
+        });
+        try {
+            await sendProxyEvent("fp_toggle", { enabled: request.enabled, source: "options_page" });
+        } catch (e) {
+            console.warn("analytics fp_toggle failed", e);
+        }
+        sendResponse({ ok: true });
     }
     return true;
 });
@@ -109,7 +175,6 @@ chrome.runtime.onInstalled.addListener(async installInfo => {
     }
 
     const platformInfo = await chrome.runtime.getPlatformInfo();
-    // let isExtensionPinned = await chrome.action.getUserSettings().isOnToolbar;
     let debugData = {
         ...platformInfo,
         agent: navigator.userAgent,
@@ -143,4 +208,5 @@ chrome.runtime.onInstalled.addListener(async installInfo => {
         ...debugData
     });
     chrome.action.setBadgeTextColor({ color: BADGE_TEXT_COLOR });
+    buildContextMenus();
 });
