@@ -63,11 +63,11 @@ let setExtensionUninstallURL = async debugData => {
 function buildContextMenus() {
     chrome.contextMenus.removeAll(() => {
         chrome.contextMenus.create({ id: "toggle", type: "checkbox", title: "Enable Force Paste", contexts: ["action"], checked: forcePasterSettings.isPasteEnabled });
-        chrome.contextMenus.create({ id: "sep1", type: "separator", contexts: ["action"] });
+        // chrome.contextMenus.create({ id: "sep1", type: "separator", contexts: ["action"] });
         chrome.contextMenus.create({ id: "shortcuts", title: "Manage keyboard shortcuts", contexts: ["action"] });
-        chrome.contextMenus.create({ id: "sep2", type: "separator", contexts: ["action"] });
+        // chrome.contextMenus.create({ id: "sep2", type: "separator", contexts: ["action"] });
         chrome.contextMenus.create({ id: "options", title: "Open dashboard", contexts: ["action"] });
-        chrome.contextMenus.create({ id: "sep3", type: "separator", contexts: ["action"] });
+        // chrome.contextMenus.create({ id: "sep3", type: "separator", contexts: ["action"] });
         chrome.contextMenus.create({ id: "rate", title: "⭐  Rate Force Paster", contexts: ["action"] });
         chrome.contextMenus.create({ id: "bug", title: "🐛  Report a bug", contexts: ["action"] });
     });
