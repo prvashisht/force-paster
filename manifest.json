@@ -43,6 +43,15 @@
     },
     "default_title": "Force the paste"
   },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+P",
+        "mac": "Alt+Shift+P"
+      },
+      "description": "Toggle Force Paster on/off"
+    }
+  },
   "browser_specific_settings": {
     "gecko": {
       "id": "{8159730a-851d-4416-bd8b-5d6117192c1f}",
