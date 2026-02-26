@@ -201,12 +201,19 @@ chrome.runtime.onInstalled.addListener(async installInfo => {
         console.warn("analytics failed", e);
     }
 
-    saveAndApplyExtensionDetails({
-        isPasteEnabled: false,
-        clickCount: 0,
-        pasteCount: 0,
-        ...debugData
-    });
+    if (installInfo.reason === "install") {
+        saveAndApplyExtensionDetails({
+            isPasteEnabled: false,
+            clickCount: 0,
+            pasteCount: 0,
+            ...debugData
+        });
+    } else {
+        // On update/reload, preserve the user's toggle state and counts.
+        // Only refresh the platform/version debug fields.
+        const { forcepaster } = await chrome.storage.local.get('forcepaster');
+        saveAndApplyExtensionDetails({ ...(forcepaster || {}), ...debugData });
+    }
     chrome.action.setBadgeTextColor({ color: BADGE_TEXT_COLOR });
     buildContextMenus();
 });
