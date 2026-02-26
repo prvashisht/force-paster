@@ -75,14 +75,3 @@ function setCaretPositionToEndOfPastedText(elem, caretPos) {
         }
     }
 }
-
-document.body.onkeydown = async event => {
-    if (forcePasterSettings.isPasteEnabled
-        && window.location.hostname == "www.pw.live"
-        && event.target.tagName.toLowerCase() === 'input'
-    ) {
-        if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
-            document.execCommand('paste')
-        }
-    }
-};
