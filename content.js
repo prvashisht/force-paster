@@ -19,10 +19,7 @@ let darkModeListener = (isDarkMode) => {
 }
 // MediaQueryList
 const darkModePreference = window.matchMedia("(prefers-color-scheme: dark)");
-// recommended method for newer browsers: specify event-type as first argument
 darkModePreference.addEventListener("change", darkModeListener);
-// deprecated method for backward compatibility
-darkModePreference.addListener(e => darkModeListener);
 // set icons on initial load
 darkModeListener(darkModePreference);
 
@@ -33,7 +30,6 @@ document.body.onpaste = event => {
         chrome.runtime.sendMessage({ type: "onpastestart", on: currEle.tagName.toLowerCase() })
         if (!isInputOrTextarea(currEle)) return;
         let currVal = currEle.value;
-        let finalVal = "";
 
         // Stop data actually being pasted into div
         event.stopPropagation();
@@ -43,7 +39,7 @@ document.body.onpaste = event => {
         let clipboardData = event.clipboardData || window.clipboardData || event.originalEvent.clipboardData;
         const pastedText = clipboardData.getData('Text');
         
-        finalVal = currVal.slice(0, currEle.selectionStart) + pastedText;
+        let finalVal = currVal.slice(0, currEle.selectionStart) + pastedText;
         let caretPos = finalVal.length; //get position to place caret after pasting
         finalVal += currVal.slice(currEle.selectionEnd);
         currEle.value = "";
@@ -60,18 +56,12 @@ document.body.onpaste = event => {
 };
 
 function setCaretPositionToEndOfPastedText(elem, caretPos) {
-    if(elem != null) {
-        if(elem.createTextRange) {
-            let range = elem.createTextRange();
-            range.move('character', caretPos);
-            range.select();
+    if (elem != null) {
+        if (elem.selectionStart) {
+            elem.focus();
+            elem.setSelectionRange(caretPos, caretPos);
         } else {
-            if (elem.selectionStart) {
-                elem.focus();
-                elem.setSelectionRange(caretPos, caretPos);
-            } else {
-                elem.focus();
-            }
+            elem.focus();
         }
     }
 }

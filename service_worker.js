@@ -80,7 +80,6 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     } else if (type === "onpastestart") {
         chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
             saveAndApplyExtensionDetails({
-                pasteStart: forcePasterSettings.pasteCount + 1,
                 lastDomain: (new URL(tabs[0].url)).hostname,
                 lastTag: on,
             });

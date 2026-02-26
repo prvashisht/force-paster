@@ -27,7 +27,8 @@
   },
   "permissions": [
     "storage",
-    "clipboardRead"
+    "clipboardRead",
+    "tabs"
   ],
   "host_permissions": [
     "<all_urls>"

@@ -78,7 +78,7 @@ export async function sendProxyEvent(eventName, params = {}, opts = {}) {
   const client_id = await getOrCreateClientId();
   const session_id = await getOrCreateSessionId();
   const token = await getOrRegisterToken(false);
-  const debug = opts.debug || true;
+  const debug = opts.debug ?? false;
 
   const payload = {
     client_id,
