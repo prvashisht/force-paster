@@ -129,7 +129,90 @@ document.querySelectorAll('a[href*="github.com/prvashisht/force-paster"]').forEa
     }
 });
 
+['watermarker', 'signaturesync', 'classicwebsearch', 'curt'].forEach(id => {
+    document.getElementById(`app-${id}`)
+        ?.addEventListener('click', () => track("optionsclick", { item: `app_${id}` }));
+});
+
 document.getElementById('close-btn').addEventListener('click', () => window.close());
+
+// ── Release notes ────────────────────────────────────────────────────────────
+
+function stripMarkdown(text) {
+    return text
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/`(.*?)`/g, '$1')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .trim();
+}
+
+function parseBullets(markdown) {
+    return markdown
+        .split('\n')
+        .map(l => l.replace(/^[-*]\s+/, '').trim())
+        .filter(l => l.length > 0 && !l.startsWith('#'));
+}
+
+async function loadReleaseNotes() {
+    const versionEl = document.getElementById('release-version');
+    const listEl = document.getElementById('release-list');
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    const olderEl = document.getElementById('older-releases');
+
+    try {
+        const res = await fetch(webext.runtime.getURL('release-notes.json'));
+        const data = await res.json();
+
+        versionEl.textContent = `v${data.version}`;
+        listEl.innerHTML = data.notes
+            .map(n => `<li>${n}</li>`)
+            .join('');
+    } catch {
+        versionEl.textContent = `v${manifest.version}`;
+        listEl.innerHTML = '<li>See release notes on GitHub</li>';
+    }
+
+    loadMoreBtn.addEventListener('click', async () => {
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.textContent = 'Loading…';
+        try {
+            const res = await fetch('https://api.github.com/repos/prvashisht/force-paster/releases?per_page=10');
+            const releases = await res.json();
+
+            // Skip the release matching the locally shipped version
+            const localVersion = versionEl.textContent.replace('v', '');
+            const older = releases.filter(r => r.tag_name !== `v${localVersion}`);
+
+            if (older.length === 0) {
+                loadMoreBtn.textContent = 'No older releases';
+                return;
+            }
+
+            olderEl.hidden = false;
+            olderEl.innerHTML = older.map(r => {
+                const bullets = parseBullets(r.body || '');
+                const items = bullets.length
+                    ? bullets.map(b => `<li>${stripMarkdown(b)}</li>`).join('')
+                    : '<li>See full notes on GitHub</li>';
+                return `
+                    <div class="older-release">
+                        <div class="older-release-tag">${r.tag_name}</div>
+                        <ul class="release-list">${items}</ul>
+                    </div>`;
+            }).join('');
+
+            loadMoreBtn.remove();
+        } catch {
+            loadMoreBtn.textContent = 'Could not load — view on GitHub ↗';
+            loadMoreBtn.disabled = false;
+            loadMoreBtn.onclick = () => {
+                window.open('https://github.com/prvashisht/force-paster/releases', '_blank');
+            };
+        }
+    });
+}
 
 loadSettings();
 loadShortcut();
+loadReleaseNotes();

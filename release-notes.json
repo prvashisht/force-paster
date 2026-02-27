@@ -1,0 +1,13 @@
+{
+  "version": "2.3.1",
+  "notes": [
+    "Fixed paste in iframe-hosted inputs — content script now injects into all frames (thanks @Aizhee!)",
+    "Added settings dashboard with toggle, usage stats, and shortcut display",
+    "Added right-click context menu on the toolbar icon (toggle, shortcuts, dashboard, rate, report)",
+    "Added keyboard shortcut Alt+Shift+P to toggle (remappable)",
+    "Added rating prompt after 15 pastes",
+    "Added pin-to-toolbar helper on the dashboard",
+    "Fixed data loss on extension reload — toggle state and counts are now preserved",
+    "Cross-browser adapter for Chrome, Firefox, and Edge"
+  ]
+}

@@ -17,6 +17,7 @@ SOURCES=(
     icons
     options.html
     options.js
+    release-notes.json
     service_worker.js
     webext.js
 )
