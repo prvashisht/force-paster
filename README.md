@@ -126,7 +126,7 @@ Events are sent anonymously via a Cloud Functions proxy. The following events ar
 
 1. Bump `"version"` in `manifest.json`.
 2. Update `"version"` and `"notes"` in `release-notes.json` to match — the build will **fail** if they differ.
-3. Merge to `main`. The `release.yml` workflow triggers automatically, builds both zips, creates a GitHub release with auto-generated notes, and attaches the zips as assets.
+3. Merge to `main`. The `release.yml` workflow triggers automatically, builds both zips, creates a GitHub release with auto-generated notes, and attaches the zips as assets. This in turn triggers `store-deploy.yml`, which publishes the zips automatically to the Chrome Web Store and Firefox Add-ons.
 
 > **Checklist every release:**
 > - [ ] `manifest.json` version bumped
