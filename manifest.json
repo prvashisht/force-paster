@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Force Paster",
-  "version": "2.2.0",
+  "version": "2.3.1",
   "description": "This extension allows you to paste text into input fields in websites that have disabled pasting.",
   "icons": {
     "16": "icons/light/icon16.png",
@@ -23,11 +23,15 @@
     }
   ],
   "background": {
-    "service_worker": "service_worker.js"
+    "service_worker": "service_worker.js",
+    "scripts": ["service_worker.js"],
+    "type": "module"
   },
   "permissions": [
     "storage",
-    "clipboardRead"
+    "clipboardRead",
+    "tabs",
+    "contextMenus"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -42,5 +46,23 @@
     },
     "default_title": "Force the paste"
   },
-  "content_security_policy": {}
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+P",
+        "mac": "Alt+Shift+P"
+      },
+      "description": "Toggle Force Paster on/off"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{8159730a-851d-4416-bd8b-5d6117192c1f}",
+      "strict_min_version": "121.0"
+    }
+  }
 }
