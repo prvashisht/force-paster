@@ -4,6 +4,7 @@
     "Dashboard redesigned with tabs: Settings, What's new, and More",
     "Added What's new section showing current release notes with older release history",
     "Added More from Pratyush section with other apps and projects",
-    "Added Buy me a coffee support link"
+    "Added Buy me a coffee support link",
+    "Fixed: force paste now works on sites that load input fields inside iframes"
   ]
 }
