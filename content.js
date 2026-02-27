@@ -23,35 +23,104 @@ darkModePreference.addEventListener("change", darkModeListener);
 // set icons on initial load
 darkModeListener(darkModePreference);
 
-const isInputOrTextarea = (currEle) => ["input", "textarea"].includes(currEle.tagName.toLowerCase());
-document.body.onpaste = event => {
-    let currEle = document.activeElement;
-    if (forcePasterSettings.isPasteEnabled) {
-        chrome.runtime.sendMessage({ type: "onpastestart", on: currEle.tagName.toLowerCase() })
-        if (!isInputOrTextarea(currEle)) return;
-        let currVal = currEle.value;
+const isInputOrTextarea = (el) => ["input", "textarea"].includes(el.tagName.toLowerCase());
+const isContentEditable = (el) => !!(el && el.isContentEditable);
 
-        // Stop data actually being pasted into div
-        event.stopPropagation();
-        event.preventDefault();
+// Capture phase at document level — runs before every page-registered listener
+// (both capture and bubble), so sites cannot block us with stopPropagation or
+// stopImmediatePropagation on their own handlers.
+document.addEventListener('paste', event => {
+    if (!forcePasterSettings.isPasteEnabled) return;
 
-        // Get pasted data via clipboard API
-        let clipboardData = event.clipboardData || window.clipboardData || event.originalEvent.clipboardData;
-        const pastedText = clipboardData.getData('Text');
-        
-        let finalVal = currVal.slice(0, currEle.selectionStart) + pastedText;
-        let caretPos = finalVal.length; //get position to place caret after pasting
-        finalVal += currVal.slice(currEle.selectionEnd);
-        currEle.value = "";
-        currEle.value = finalVal;
-        setCaretPositionToEndOfPastedText(currEle, caretPos);
-        chrome.runtime.sendMessage({ type: "onpastecomplete" }, response => {
-            if (response?.showRatingPrompt) {
-                showRatingToast();
-            }
-        });
+    const currEle = document.activeElement;
+    const isField    = isInputOrTextarea(currEle);
+    const isEditable = isContentEditable(currEle);
+
+    if (!isField && !isEditable) return;
+
+    // Seize the event — stop all other listeners (including the site's) from
+    // seeing it, then cancel the browser's default paste behaviour.
+    event.stopImmediatePropagation();
+    event.preventDefault();
+
+    const clipboardData = event.clipboardData || window.clipboardData || event.originalEvent?.clipboardData;
+    const pastedText = clipboardData.getData('Text');
+
+    chrome.runtime.sendMessage({ type: "onpastestart", on: currEle.tagName.toLowerCase() });
+
+    if (isField) {
+        pasteIntoInputField(currEle, pastedText);
+    } else {
+        pasteIntoContentEditable(currEle, pastedText);
     }
-};
+
+    chrome.runtime.sendMessage({ type: "onpastecomplete" }, response => {
+        if (response?.showRatingPrompt) {
+            showRatingToast();
+        }
+    });
+}, true /* capture */);
+
+// ---------------------------------------------------------------------------
+// Input / textarea
+// Uses the native prototype setter so React's internal fiber tracking sees the
+// mutation, then fires input + change for Vue / Angular too.
+// ---------------------------------------------------------------------------
+function pasteIntoInputField(el, pastedText) {
+    const start    = el.selectionStart;
+    const end      = el.selectionEnd;
+    const curr     = el.value;
+    const finalVal = curr.slice(0, start) + pastedText + curr.slice(end);
+    const caretPos = start + pastedText.length;
+
+    const proto = el.tagName.toLowerCase() === 'textarea'
+        ? window.HTMLTextAreaElement.prototype
+        : window.HTMLInputElement.prototype;
+    const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+    if (nativeSetter) {
+        nativeSetter.call(el, finalVal);
+    } else {
+        el.value = finalVal;
+    }
+
+    setCaretPositionToEndOfPastedText(el, caretPos);
+    fireFrameworkEvents(el);
+}
+
+// ---------------------------------------------------------------------------
+// contenteditable  (Gmail, Notion, Slack-style editors)
+// execCommand('insertText') goes through Blink's editing pipeline and fires
+// beforeinput + input natively — React / Vue / Angular pick these up without
+// any extra hacks. Falls back to the Selection API if execCommand is blocked.
+// ---------------------------------------------------------------------------
+function pasteIntoContentEditable(el, pastedText) {
+    el.focus();
+    const inserted = document.execCommand('insertText', false, pastedText);
+    if (!inserted) {
+        insertTextViaSelectionAPI(el, pastedText);
+    }
+}
+
+function insertTextViaSelectionAPI(container, text) {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    const textNode = document.createTextNode(text);
+    range.insertNode(textNode);
+    range.setStartAfter(textNode);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    fireFrameworkEvents(container);
+}
+
+// Dispatch input + change so React / Vue / Angular reconcilers detect the
+// mutation after a programmatic value change.
+function fireFrameworkEvents(el) {
+    el.dispatchEvent(new Event('input',  { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+}
 
 let _ratingToastShown = false;
 

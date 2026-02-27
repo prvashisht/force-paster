@@ -1,10 +1,8 @@
 {
-  "version": "2.4.0",
+  "version": "2.5.0",
   "notes": [
-    "Dashboard redesigned with tabs: Settings, What's new, and More",
-    "Added What's new section showing current release notes with older release history",
-    "Added More from Pratyush section with other apps and projects",
-    "Added Buy me a coffee support link",
-    "Fixed: force paste now works on sites that load input fields inside iframes"
+    "Force paste now works in rich-text editors like Gmail, Notion, and Slack (contenteditable support)",
+    "Paste can no longer be blocked by sites using aggressive JavaScript event interception",
+    "React, Vue, and Angular apps now correctly detect the pasted value as a state change"
   ]
 }
