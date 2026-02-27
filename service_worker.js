@@ -220,4 +220,11 @@ webext.runtime.onInstalled.addListener(async installInfo => {
     }
     webext.action.setBadgeTextColor({ color: BADGE_TEXT_COLOR });
     buildContextMenus();
+
+    // Open the dashboard once ever — first install or first update to this version.
+    const { hasSeenDashboard } = await webext.storage.local.get('hasSeenDashboard');
+    if (!hasSeenDashboard) {
+        await webext.storage.local.set({ hasSeenDashboard: true });
+        webext.runtime.openOptionsPage();
+    }
 });

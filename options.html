@@ -295,9 +295,37 @@
         footer a:hover {
             color: var(--accent);
         }
+
+        /* ── Close button ── */
+        .close-btn {
+            position: fixed;
+            top: 16px;
+            right: 20px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 50%;
+            color: var(--text-muted);
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .close-btn:hover {
+            background: var(--divider);
+            color: var(--text);
+        }
     </style>
 </head>
 <body>
+    <button class="close-btn" id="close-btn" title="Close" aria-label="Close dashboard">&#x2715;</button>
+
     <div class="container">
 
         <header>

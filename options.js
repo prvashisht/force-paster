@@ -93,5 +93,7 @@ document.querySelectorAll('a[href*="github.com/prvashisht/force-paster"]').forEa
     }
 });
 
+document.getElementById('close-btn').addEventListener('click', () => window.close());
+
 loadSettings();
 loadShortcut();
