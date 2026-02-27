@@ -296,6 +296,45 @@
             color: var(--accent);
         }
 
+        /* ── Pin helper ── */
+        .pin-card {
+            background: var(--card);
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: none;
+            gap: 12px;
+            flex-direction: column;
+        }
+
+        .pin-card.visible {
+            display: flex;
+        }
+
+        .pin-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pin-card-desc {
+            font-size: 13px;
+            color: var(--text-sub);
+            line-height: 1.6;
+        }
+
+        .pin-card-desc code {
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: 11px;
+            background: var(--shortcut-bg);
+            color: var(--shortcut-text);
+            padding: 1px 5px;
+            border-radius: 4px;
+        }
+
         /* ── Close button ── */
         .close-btn {
             position: fixed;
@@ -334,6 +373,12 @@
                 <h1>Force Paster <span class="version" id="version"></span></h1>
             </div>
         </header>
+
+        <!-- Pin helper (shown only when not on toolbar) -->
+        <div class="pin-card" id="pin-card">
+            <div class="pin-card-title">📌 Pin Force Paster to your toolbar</div>
+            <div class="pin-card-desc" id="pin-card-desc"></div>
+        </div>
 
         <!-- Toggle -->
         <div class="card">

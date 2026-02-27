@@ -76,6 +76,41 @@ async function loadShortcut() {
     }
 }
 
+// ── Pin helper ───────────────────────────────────────────────────────────────
+
+const pinCard = document.getElementById('pin-card');
+const pinDesc = document.getElementById('pin-card-desc');
+const isFirefoxBrowser = typeof browser !== 'undefined';
+
+function setPinCardVisible(isOnToolbar) {
+    if (isOnToolbar) {
+        pinCard.classList.remove('visible');
+    } else {
+        pinDesc.innerHTML = isFirefoxBrowser
+            ? 'Right-click the extensions button in the toolbar → <code>Pin to Toolbar</code>.'
+            : 'Click the <code>⊕</code> extensions puzzle icon in the toolbar → find Force Paster → click the pin icon.';
+        pinCard.classList.add('visible');
+    }
+}
+
+async function checkPinStatus() {
+    try {
+        const settings = await webext.action.getUserSettings();
+        setPinCardVisible(settings.isOnToolbar);
+    } catch {
+        // API not available — hide the card silently
+    }
+}
+
+// Auto-dismiss if user pins the extension while the page is open
+if (webext.action.onUserSettingsChanged) {
+    webext.action.onUserSettingsChanged.addListener((settings) => {
+        setPinCardVisible(settings.isOnToolbar);
+    });
+}
+
+checkPinStatus();
+
 function track(type, extra = {}) {
     webext.runtime.sendMessage({ type, ...extra }).catch(() => {});
 }
