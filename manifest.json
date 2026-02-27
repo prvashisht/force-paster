@@ -17,7 +17,9 @@
       "matches": [
         "http://*/*",
         "https://*/*"
-      ]
+      ],
+      "all_frames": true,
+      "run_at": "document_end"
     }
   ],
   "background": {
