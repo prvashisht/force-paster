@@ -12,7 +12,7 @@ Force Paster is a browser extension that lets you paste text into any input fiel
 - **One-click toggle** — click the extension icon to enable or disable; the toolbar badge shows the current state (`on` / `off`)
 - **Keyboard shortcut** — toggle with **Alt+Shift+P** (remappable per browser)
 - **Right-click context menu** — toggle, open the dashboard, manage shortcuts, rate the extension, or report a bug directly from the toolbar icon
-- **Dashboard** — a settings page with a toggle, paste/toggle stats, and shortcut info; open it via the context menu or `chrome://extensions` → Details → Extension options
+- **Dashboard** — a tabbed settings page (Settings / What's new / More); open it via the context menu or `chrome://extensions` → Details → Extension options
 - **Dark & light icons** — the toolbar icon automatically follows your system theme
 - **Cross-browser** — works on Chrome, Firefox (121+), and Edge
 
@@ -81,8 +81,9 @@ All Chrome/Firefox API differences are centralised in `webext.js`. The service w
 | `webext.js` | Browser adapter — detects Chrome/Edge vs Firefox at runtime, re-exports APIs under a unified `webext` object, and adds helpers like `openShortcutsPage()` and `action.getUserSettings()` |
 | `content.js` | Content script injected into every page — intercepts paste events and forwards theme-change messages to the service worker |
 | `service_worker.js` | Background service worker — manages toggle state, badge, context menu, options page, and all analytics calls |
-| `options.html` | Dashboard markup — toggle, usage stats, keyboard shortcut info, and links |
-| `options.js` | Dashboard logic — reads/writes storage, reflects live state changes, sends analytics via service worker messages |
+| `options.html` | Dashboard markup — tabbed UI with Settings, What's new, and More panels |
+| `options.js` | Dashboard logic — reads/writes storage, reflects live state changes, loads release notes, sends analytics via service worker messages |
+| `release-notes.json` | Current version's release notes — bundled with the extension and displayed in the What's new tab |
 | `analytics.js` | Analytics helper — proxies GA4 events through a Cloud Functions endpoint with client-ID and session management |
 
 ---
@@ -98,7 +99,8 @@ Events are sent anonymously via a Cloud Functions proxy. The following events ar
 | `fp_paste` | Paste completed | `tag` (element type), `domain` |
 | `fp_menu_click` | Context menu item clicked (non-toggle) | `item` (`shortcuts` / `options` / `rate` / `bug`) |
 | `fp_options_open` | Dashboard page opened | — |
-| `fp_options_click` | Link clicked on dashboard | `item` (`rate` / `bug` / `github`) |
+| `fp_options_click` | Link clicked on dashboard | `item` (`rate` / `bug` / `github` / `bmc` / `app_*` / `footer_author`) |
+| `fp_rating_prompt` | User responded to the rating toast | `choice` (`rate` / `later` / `never`) |
 
 ---
 
@@ -122,9 +124,14 @@ Events are sent anonymously via a Cloud Functions proxy. The following events ar
 
 ### Releasing a new version
 
-1. Bump `"version"` in `manifest.json` (the README badge updates automatically from the manifest).
-2. Push a tag matching `v*` (e.g. `git tag v2.3.0 && git push --tags`).
-3. The `.github/workflows/publish.yml` workflow zips the extension and publishes it to the Chrome Web Store, Firefox Add-ons, and Edge Add-ons automatically (requires the store secrets to be configured in repository settings).
+1. Bump `"version"` in `manifest.json`.
+2. Update `"version"` and `"notes"` in `release-notes.json` to match — the build will **fail** if they differ.
+3. Merge to `main`. The `release.yml` workflow triggers automatically, builds both zips, creates a GitHub release with auto-generated notes, and attaches the zips as assets.
+
+> **Checklist every release:**
+> - [ ] `manifest.json` version bumped
+> - [ ] `release-notes.json` version and notes updated
+> - [ ] README features/structure updated if new things were added
 
 ---
 

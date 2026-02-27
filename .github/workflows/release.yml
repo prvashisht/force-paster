@@ -36,12 +36,26 @@ jobs:
           chmod +x build.sh
           ./build.sh
 
+      - name: Format release notes from bundled JSON
+        if: steps.tag.outputs.exists == 'false'
+        id: notes
+        run: |
+          BODY=$(node -e "
+            const r = require('./release-notes.json');
+            const bullets = r.notes.map(n => '- ' + n).join('\n');
+            console.log('## What\'s new in v' + r.version + '\n\n' + bullets);
+          ")
+          echo "body<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$BODY" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub release
         if: steps.tag.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.value }}
           name: v${{ steps.version.outputs.value }}
+          body: ${{ steps.notes.outputs.body }}
           generate_release_notes: true
           files: |
             dist/force-paster-chrome-v${{ steps.version.outputs.value }}.zip

@@ -279,6 +279,103 @@
             font-size: 16px;
         }
 
+        /* ── Section label ── */
+        .section-label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            padding: 4px 4px 0;
+        }
+
+        /* ── What's new ── */
+        .release-content {
+            padding: 18px 20px;
+        }
+
+        .release-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .release-badge {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent);
+            background: var(--shortcut-bg);
+            border-radius: 20px;
+            padding: 2px 8px;
+        }
+
+        .release-list {
+            margin: 0;
+            padding: 0 0 0 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .release-list li {
+            font-size: 13px;
+            color: var(--text-sub);
+            line-height: 1.5;
+        }
+
+        .load-more-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 10px 0 0;
+            display: block;
+            transition: color 0.15s;
+        }
+
+        .load-more-btn:hover { color: var(--accent); }
+        .load-more-btn:disabled { opacity: 0.5; cursor: default; }
+
+        .older-releases {
+            margin-top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .older-release {
+            border-top: 1px solid var(--divider);
+            padding-top: 12px;
+        }
+
+        .older-release-tag {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        /* ── More from section ── */
+        .link-row-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .link-row-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .link-row-sub {
+            font-size: 12px;
+            color: var(--text-sub);
+            line-height: 1.4;
+        }
+
         /* ── Buy me a coffee ── */
         .bmc-link {
             display: flex;
@@ -320,6 +417,42 @@
             color: var(--text-sub);
             line-height: 1.4;
         }
+
+        /* ── Tabs ── */
+        .tab-bar {
+            display: flex;
+            border-bottom: 1px solid var(--divider);
+            margin-bottom: 16px;
+            gap: 0;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.15s, border-color 0.15s;
+        }
+
+        .tab-btn:hover { color: var(--text); }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-panel {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tab-panel.active { display: flex; }
 
         /* ── Footer ── */
         footer {
@@ -416,80 +549,163 @@
             </div>
         </header>
 
-        <!-- Pin helper (shown only when not on toolbar) -->
-        <div class="pin-card" id="pin-card">
-            <div class="pin-card-title">📌 Pin Force Paster to your toolbar</div>
-            <div class="pin-card-desc" id="pin-card-desc"></div>
-        </div>
+        <!-- Tab bar -->
+        <nav class="tab-bar" role="tablist">
+            <button class="tab-btn active" role="tab" aria-selected="true"  data-tab="settings">Settings</button>
+            <button class="tab-btn"         role="tab" aria-selected="false" data-tab="whats-new">What's new</button>
+            <button class="tab-btn"         role="tab" aria-selected="false" data-tab="more">More</button>
+        </nav>
 
-        <!-- Toggle -->
-        <div class="card">
-            <div class="card-row">
-                <div>
-                    <div class="card-title">Force Paste</div>
-                    <div class="card-desc">Enable paste on sites that block it</div>
+        <!-- ── Tab: Settings ── -->
+        <div class="tab-panel active" id="tab-settings" role="tabpanel">
+
+            <!-- Pin helper (shown only when not on toolbar) -->
+            <div class="pin-card" id="pin-card">
+                <div class="pin-card-title">📌 Pin Force Paster to your toolbar</div>
+                <div class="pin-card-desc" id="pin-card-desc"></div>
+            </div>
+
+            <!-- Toggle -->
+            <div class="card">
+                <div class="card-row">
+                    <div>
+                        <div class="card-title">Force Paste</div>
+                        <div class="card-desc">Enable paste on sites that block it</div>
+                    </div>
+                    <label class="switch" aria-label="Toggle Force Paste">
+                        <input type="checkbox" id="toggle">
+                        <span class="slider"></span>
+                    </label>
                 </div>
-                <label class="switch" aria-label="Toggle Force Paste">
-                    <input type="checkbox" id="toggle">
-                    <span class="slider"></span>
-                </label>
             </div>
-        </div>
 
-        <!-- Stats -->
-        <div class="card stats-card">
-            <div class="stat">
-                <div class="stat-number" id="paste-count">—</div>
-                <div class="stat-label">Pastes completed</div>
-            </div>
-            <div class="stat">
-                <div class="stat-number" id="toggle-count">—</div>
-                <div class="stat-label">Times toggled</div>
-            </div>
-        </div>
-
-        <!-- Keyboard shortcut -->
-        <div class="card">
-            <div class="shortcut-content">
-                <div class="card-title">Keyboard Shortcut</div>
-                <div class="shortcut-row">
-                    <span class="shortcut-key" id="shortcut-display">Alt+Shift+P</span>
+            <!-- Stats -->
+            <div class="card stats-card">
+                <div class="stat">
+                    <div class="stat-number" id="paste-count">—</div>
+                    <div class="stat-label">Pastes completed</div>
                 </div>
-                <p class="shortcut-hint" id="shortcut-hint"></p>
+                <div class="stat">
+                    <div class="stat-number" id="toggle-count">—</div>
+                    <div class="stat-label">Times toggled</div>
+                </div>
             </div>
+
+            <!-- Keyboard shortcut -->
+            <div class="card">
+                <div class="shortcut-content">
+                    <div class="card-title">Keyboard Shortcut</div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key" id="shortcut-display">Alt+Shift+P</span>
+                    </div>
+                    <p class="shortcut-hint" id="shortcut-hint"></p>
+                </div>
+            </div>
+
         </div>
 
-        <!-- Links -->
-        <div class="card">
-            <a class="link-row" id="rate-link" href="https://vashis.ht/rd/forcepaster?from=options-page" target="_blank" rel="noopener">
-                <span class="link-row-label">⭐&nbsp; Rate Force Paster</span>
-                <span class="link-chevron">›</span>
-            </a>
-            <a class="link-row" href="https://github.com/prvashisht/force-paster/issues/new" target="_blank" rel="noopener">
-                <span class="link-row-label">🐛&nbsp; Report a bug</span>
-                <span class="link-chevron">›</span>
-            </a>
-            <a class="link-row" href="https://github.com/prvashisht/force-paster" target="_blank" rel="noopener">
-                <span class="link-row-label">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.7"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.73.083-.73 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"/></svg>
-                    &nbsp;View on GitHub
+        <!-- ── Tab: What's new ── -->
+        <div class="tab-panel" id="tab-whats-new" role="tabpanel">
+
+            <div class="card">
+                <div class="release-content">
+                    <div class="release-header">
+                        <span class="card-title">What's new</span>
+                        <span class="release-badge" id="release-version"></span>
+                    </div>
+                    <ul class="release-list" id="release-list"></ul>
+                    <button class="load-more-btn" id="load-more-btn">View older releases ↓</button>
+                    <div class="older-releases" id="older-releases" hidden></div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ── Tab: More ── -->
+        <div class="tab-panel" id="tab-more" role="tabpanel">
+
+            <!-- Links -->
+            <div class="card">
+                <a class="link-row" id="rate-link" href="https://vashis.ht/rd/forcepaster?from=forcepaster-extension-options_page" target="_blank" rel="noopener">
+                    <span class="link-row-label">⭐&nbsp; Rate Force Paster</span>
+                    <span class="link-chevron">›</span>
+                </a>
+                <a class="link-row" href="https://github.com/prvashisht/force-paster/issues/new" target="_blank" rel="noopener">
+                    <span class="link-row-label">🐛&nbsp; Report a bug</span>
+                    <span class="link-chevron">›</span>
+                </a>
+                <a class="link-row" href="https://github.com/prvashisht/force-paster" target="_blank" rel="noopener">
+                    <span class="link-row-label">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.7"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.73.083-.73 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                        &nbsp;View on GitHub
+                    </span>
+                    <span class="link-chevron">›</span>
+                </a>
+            </div>
+
+            <!-- More from Pratyush -->
+            <div class="section-label">More from Pratyush</div>
+            <div class="card">
+                <a class="link-row" id="app-watermarker"
+                   href="https://watermark.page?utm_source=forcepaster&utm_medium=extension&utm_campaign=promote"
+                   target="_blank" rel="noopener">
+                    <span class="link-row-label">
+                        <span class="link-row-text">
+                            <span class="link-row-title">Watermarker</span>
+                            <span class="link-row-sub">Add watermarks to PDFs &amp; images — local only, nothing uploaded</span>
+                        </span>
+                    </span>
+                    <span class="link-chevron">›</span>
+                </a>
+                <a class="link-row" id="app-signaturesync"
+                   href="https://vashis.ht/rd/signaturesync?from=forcepaster-extension-promote"
+                   target="_blank" rel="noopener">
+                    <span class="link-row-label">
+                        <span class="link-row-text">
+                            <span class="link-row-title">Signature Sync</span>
+                            <span class="link-row-sub">Automate messages, signatures &amp; notes on LinkedIn connection requests</span>
+                        </span>
+                    </span>
+                    <span class="link-chevron">›</span>
+                </a>
+                <a class="link-row" id="app-classicwebsearch"
+                   href="https://vashis.ht/rd/classicwebsearch?from=forcepaster-extension-promote"
+                   target="_blank" rel="noopener">
+                    <span class="link-row-label">
+                        <span class="link-row-text">
+                            <span class="link-row-title">Classic Web Search</span>
+                            <span class="link-row-sub">Skip Google AI results — get traditional web search only</span>
+                        </span>
+                    </span>
+                    <span class="link-chevron">›</span>
+                </a>
+                <a class="link-row" id="app-curt"
+                   href="https://github.com/prvashisht/curt"
+                   target="_blank" rel="noopener">
+                    <span class="link-row-label">
+                        <span class="link-row-text">
+                            <span class="link-row-title">Curt</span>
+                            <span class="link-row-sub">Open source smart curtain controller — PCB, firmware &amp; 3D-printable case</span>
+                        </span>
+                    </span>
+                    <span class="link-chevron">›</span>
+                </a>
+            </div>
+
+            <!-- Support -->
+            <a class="bmc-link" id="bmc-link" href="https://www.buymeacoffee.com/prvashisht" target="_blank" rel="noopener">
+                <span class="bmc-icon">☕</span>
+                <span class="bmc-text">
+                    <span class="bmc-title">Buy me a coffee</span>
+                    <span class="bmc-sub">Force Paster is free &amp; open source — your support keeps it alive</span>
                 </span>
                 <span class="link-chevron">›</span>
             </a>
+
         </div>
 
-        <!-- Support -->
-        <a class="bmc-link" id="bmc-link" href="https://www.buymeacoffee.com/prvashisht" target="_blank" rel="noopener">
-            <span class="bmc-icon">☕</span>
-            <span class="bmc-text">
-                <span class="bmc-title">Buy me a coffee</span>
-                <span class="bmc-sub">Force Paster is free &amp; open source — your support keeps it alive</span>
-            </span>
-            <span class="link-chevron">›</span>
-        </a>
-
         <footer>
-            Made by <a href="https://vashis.ht" target="_blank" rel="noopener">Pratyush Vashisht</a>
+            Made with ♡ by <a id="footer-link" href="https://pratyushvashisht.com?utm_source=forcepaster&utm_medium=extension&utm_campaign=footer" target="_blank" rel="noopener">Pratyush Vashisht</a>
         </footer>
 
     </div>

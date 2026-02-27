@@ -6,7 +6,7 @@ BADGE_BG_DISABLED = "#ff0000";
 
 const RATING_THRESHOLD = 15;
 const RATING_SNOOZE_BY = 15;
-const RATING_STORE_URL = "https://vashis.ht/rd/forcepaster?from=rating-prompt";
+const RATING_STORE_URL = "https://vashis.ht/rd/forcepaster?from=forcepaster-extension-rating_prompt";
 
 function shouldShowRatingPrompt(settings) {
     const { pasteCount, ratingState } = settings;
@@ -122,7 +122,7 @@ webext.contextMenus.onClicked.addListener(async (info) => {
             sendProxyEvent("fp_menu_click", { item: "options" }).catch(() => {});
             break;
         case "rate":
-            webext.tabs.create({ url: "https://vashis.ht/rd/forcepaster?from=extension-context-menu" });
+            webext.tabs.create({ url: "https://vashis.ht/rd/forcepaster?from=forcepaster-extension-context_menu" });
             sendProxyEvent("fp_menu_click", { item: "rate" }).catch(() => {});
             break;
         case "bug":
