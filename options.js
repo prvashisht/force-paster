@@ -76,5 +76,22 @@ async function loadShortcut() {
     }
 }
 
+function track(type, extra = {}) {
+    webext.runtime.sendMessage({ type, ...extra }).catch(() => {});
+}
+
+// Track dashboard open and link clicks
+track("optionsopen");
+
+document.getElementById('rate-link').addEventListener('click', () => track("optionsclick", { item: "rate" }));
+document.querySelectorAll('a[href*="issues/new"]').forEach(el =>
+    el.addEventListener('click', () => track("optionsclick", { item: "bug" }))
+);
+document.querySelectorAll('a[href*="github.com/prvashisht/force-paster"]').forEach(el => {
+    if (!el.href.includes('issues')) {
+        el.addEventListener('click', () => track("optionsclick", { item: "github" }));
+    }
+});
+
 loadSettings();
 loadShortcut();

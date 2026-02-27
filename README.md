@@ -9,9 +9,12 @@ Force Paster is a browser extension that lets you paste text into any input fiel
 ## Features
 
 - **Force paste anywhere** — overrides paste-blocking on any website for `<input>` and `<textarea>` elements
-- **One-click toggle** — click the extension icon to enable or disable; the toolbar badge shows the current state (`ON` / off)
-- **Keyboard shortcut** — toggle with **Alt+Shift+P** (remappable in `chrome://extensions/shortcuts` or `about:addons`)
+- **One-click toggle** — click the extension icon to enable or disable; the toolbar badge shows the current state (`on` / `off`)
+- **Keyboard shortcut** — toggle with **Alt+Shift+P** (remappable per browser)
+- **Right-click context menu** — toggle, open the dashboard, manage shortcuts, rate the extension, or report a bug directly from the toolbar icon
+- **Dashboard** — a settings page with a toggle, paste/toggle stats, and shortcut info; open it via the context menu or `chrome://extensions` → Details → Extension options
 - **Dark & light icons** — the toolbar icon automatically follows your system theme
+- **Cross-browser** — works on Chrome, Firefox (121+), and Edge
 
 ---
 
@@ -38,23 +41,35 @@ Force Paster is a browser extension that lets you paste text into any input fiel
 ## How it works
 
 ```
-User clicks icon / presses Alt+Shift+P
+User clicks icon / presses Alt+Shift+P / uses context menu
         │
         ▼
-service_worker.js  ←─ chrome.action.onClicked / _execute_action command
-  • toggles isPasteEnabled in chrome.storage.local
-  • updates badge text ("ON" / "")
-  • reads tabs[0].url to set the active-tab icon
+service_worker.js  ←─ action.onClicked / _execute_action command / contextMenus.onClicked
+  • toggles isPasteEnabled in storage.local
+  • updates badge text ("on" / "off") and badge colour
+  • syncs the "Enable Force Paste" checkbox in the context menu
+  • dispatches analytics events (fp_toggle, fp_menu_click, etc.)
         │
-        ▼  storage change event
-content.js  (runs in every page)
+        ▼  storage.onChanged
+content.js  (injected into every page)
   • listens on document.body.onpaste
   • when isPasteEnabled, intercepts the paste event, reads clipboard
-    text via the Clipboard API, and writes it into the focused element
-  • reports paste counts back to the service worker via runtime messages
-  • watches prefers-color-scheme to notify the service worker of theme
-    changes so the correct toolbar icon variant is displayed
+    text, and writes it directly into the focused <input>/<textarea>
+  • reports paste completion back to the service worker via runtime messages
+  • watches prefers-color-scheme and notifies the service worker so the
+    correct toolbar icon variant (light/dark) is displayed
+        │
+        ▼  (options page)
+options.html / options.js
+  • standalone dashboard — reads state from storage.local
+  • toggle sends a "setenabled" message to the service worker
+  • shows paste count, toggle count, and current keyboard shortcut
+  • sends analytics events (fp_options_open, fp_options_click) via messages
 ```
+
+### Browser compatibility
+
+All Chrome/Firefox API differences are centralised in `webext.js`. The service worker and options page use `webext.*` throughout; `content.js` and `analytics.js` use the `chrome` namespace, which Firefox MV3 also exposes in those contexts.
 
 ---
 
@@ -62,10 +77,28 @@ content.js  (runs in every page)
 
 | File | Description |
 |------|-------------|
-| `manifest.json` | Extension manifest (MV3) — permissions, icons, content script registration, keyboard command |
-| `content.js` | Content script injected into every page — intercepts paste events and forwards theme-change messages |
-| `service_worker.js` | Background service worker — manages toggle state, badge, icon, and paste-count tracking |
-| `analytics.js` | Lightweight analytics helper used by the service worker to report events |
+| `manifest.json` | Extension manifest (MV3) — permissions, icons, content script registration, keyboard command, options page |
+| `webext.js` | Browser adapter — detects Chrome/Edge vs Firefox at runtime, re-exports APIs under a unified `webext` object, and adds helpers like `openShortcutsPage()` and `action.getUserSettings()` |
+| `content.js` | Content script injected into every page — intercepts paste events and forwards theme-change messages to the service worker |
+| `service_worker.js` | Background service worker — manages toggle state, badge, context menu, options page, and all analytics calls |
+| `options.html` | Dashboard markup — toggle, usage stats, keyboard shortcut info, and links |
+| `options.js` | Dashboard logic — reads/writes storage, reflects live state changes, sends analytics via service worker messages |
+| `analytics.js` | Analytics helper — proxies GA4 events through a Cloud Functions endpoint with client-ID and session management |
+
+---
+
+## Analytics events
+
+Events are sent anonymously via a Cloud Functions proxy. The following events are tracked:
+
+| Event | When | Key params |
+|-------|------|------------|
+| `extension_installed` | Install or update | `reason`, platform info, locale |
+| `fp_toggle` | Enable/disable toggled | `enabled`, `source` (`action_icon` / `context_menu` / `options_page`) |
+| `fp_paste` | Paste completed | `tag` (element type), `domain` |
+| `fp_menu_click` | Context menu item clicked (non-toggle) | `item` (`shortcuts` / `options` / `rate` / `bug`) |
+| `fp_options_open` | Dashboard page opened | — |
+| `fp_options_click` | Link clicked on dashboard | `item` (`rate` / `bug` / `github`) |
 
 ---
 
@@ -78,12 +111,18 @@ content.js  (runs in every page)
 ### Workflow
 
 1. Make your changes to the source files.
-2. In Chrome, go to `chrome://extensions/` and click the **reload** icon on the Force Paster card to pick up the latest content script and service worker.
-3. Test on a site that blocks pasting (e.g. many banking or exam portals).
+2. In Chrome, go to `chrome://extensions/` and click the **reload** icon on the Force Paster card to pick up changes.
+3. In Firefox, go to `about:debugging#/runtime/this-firefox` and click **Reload** next to Force Paster.
+4. Test on a site that blocks pasting (e.g. many banking or exam portals).
+
+### Keyboard shortcut remap
+
+- **Chrome / Edge** — `chrome://extensions/shortcuts`
+- **Firefox** — `about:addons` → Extensions → Force Paster → Manage
 
 ### Releasing a new version
 
-1. Bump `"version"` in `manifest.json`.
+1. Bump `"version"` in `manifest.json` (the README badge updates automatically from the manifest).
 2. Push a tag matching `v*` (e.g. `git tag v2.3.0 && git push --tags`).
 3. The `.github/workflows/publish.yml` workflow zips the extension and publishes it to the Chrome Web Store, Firefox Add-ons, and Edge Add-ons automatically (requires the store secrets to be configured in repository settings).
 

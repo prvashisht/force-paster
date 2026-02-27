@@ -103,15 +103,19 @@ webext.contextMenus.onClicked.addListener(async (info) => {
         }
         case "shortcuts":
             await webext.openShortcutsPage();
+            sendProxyEvent("fp_menu_click", { item: "shortcuts" }).catch(() => {});
             break;
         case "options":
             webext.runtime.openOptionsPage();
+            sendProxyEvent("fp_menu_click", { item: "options" }).catch(() => {});
             break;
         case "rate":
             webext.tabs.create({ url: "https://vashis.ht/rd/forcepaster?from=extension-context-menu" });
+            sendProxyEvent("fp_menu_click", { item: "rate" }).catch(() => {});
             break;
         case "bug":
             webext.tabs.create({ url: "https://github.com/prvashisht/force-paster/issues/new" });
+            sendProxyEvent("fp_menu_click", { item: "bug" }).catch(() => {});
             break;
     }
 });
@@ -145,6 +149,12 @@ webext.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             console.warn("analytics fp_paste failed", e);
         }
         sendResponse({ totalPastes: forcePasterSettings.pasteCount });
+    } else if (type === "optionsopen") {
+        sendProxyEvent("fp_options_open").catch(() => {});
+        sendResponse({ ok: true });
+    } else if (type === "optionsclick") {
+        sendProxyEvent("fp_options_click", { item: request.item }).catch(() => {});
+        sendResponse({ ok: true });
     } else if (type === "setenabled") {
         saveAndApplyExtensionDetails({
             isPasteEnabled: request.enabled,
