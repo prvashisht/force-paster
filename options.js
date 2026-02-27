@@ -1,4 +1,8 @@
-const manifest = chrome.runtime.getManifest();
+// Inline adapter: options pages run in a window (not a worker), so we skip the ES module.
+// Firefox MV3 supports both `browser` and `chrome` in extension pages; prefer `browser`.
+const webext = (typeof browser !== 'undefined' && browser.runtime) ? browser : chrome;
+
+const manifest = webext.runtime.getManifest();
 document.getElementById('version').textContent = `v${manifest.version}`;
 
 // Swap icon based on color scheme
@@ -20,12 +24,12 @@ function updateUI(settings) {
 }
 
 async function loadSettings() {
-    const { forcepaster } = await chrome.storage.local.get('forcepaster');
+    const { forcepaster } = await webext.storage.local.get('forcepaster');
     updateUI(forcepaster);
 }
 
 // Reflect changes made elsewhere (icon click, keyboard shortcut, context menu)
-chrome.storage.onChanged.addListener((changes) => {
+webext.storage.onChanged.addListener((changes) => {
     if (changes.forcepaster?.newValue) {
         updateUI(changes.forcepaster.newValue);
     }
@@ -35,12 +39,12 @@ chrome.storage.onChanged.addListener((changes) => {
 
 document.getElementById('toggle').addEventListener('change', async (e) => {
     try {
-        await chrome.runtime.sendMessage({ type: 'setenabled', enabled: e.target.checked });
+        await webext.runtime.sendMessage({ type: 'setenabled', enabled: e.target.checked });
     } catch (err) {
         // Service worker may be sleeping; write directly and it will pick it up
-        const { forcepaster } = await chrome.storage.local.get('forcepaster');
+        const { forcepaster } = await webext.storage.local.get('forcepaster');
         const updated = { ...(forcepaster || {}), isPasteEnabled: e.target.checked };
-        await chrome.storage.local.set({ forcepaster: updated });
+        await webext.storage.local.set({ forcepaster: updated });
     }
 });
 
@@ -51,7 +55,7 @@ async function loadShortcut() {
     const hintEl = document.getElementById('shortcut-hint');
 
     try {
-        const commands = await chrome.commands.getAll();
+        const commands = await webext.commands.getAll();
         const cmd = commands.find(c => c.name === '_execute_action');
         if (cmd?.shortcut) {
             shortcutEl.textContent = cmd.shortcut;

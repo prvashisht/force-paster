@@ -5,6 +5,7 @@ BADGE_BG_ENABLED = "#518c60",
 BADGE_BG_DISABLED = "#ff0000";
 
 import { sendProxyEvent, TOKEN_STORAGE_KEY, CLIENT_ID_STORAGE_KEY } from "./analytics.js";
+import { webext } from "./webext.js";
 
 let forcePasterSettings = {
     isPasteEnabled: false,
@@ -13,10 +14,10 @@ let forcePasterSettings = {
 };
 
 // Restore persisted state on service worker startup and sync the context menu checkbox.
-chrome.storage.local.get(['forcepaster'], (item) => {
+webext.storage.local.get(['forcepaster'], (item) => {
     if (item.forcepaster) {
         forcePasterSettings = item.forcepaster;
-        chrome.contextMenus.update("toggle", { checked: forcePasterSettings.isPasteEnabled }).catch(() => {});
+        webext.contextMenus.update("toggle", { checked: forcePasterSettings.isPasteEnabled }).catch(() => {});
     }
 });
 
@@ -25,13 +26,13 @@ let saveAndApplyExtensionDetails = newData => {
         ...forcePasterSettings,
         ...newData,
     };
-    chrome.storage.local.set({ 'forcepaster': forcePasterSettings });
+    webext.storage.local.set({ 'forcepaster': forcePasterSettings });
     setExtensionUninstallURL(forcePasterSettings).catch(e => {
         console.warn("setExtensionUninstallURL failed", e);
     });
-    chrome.action.setBadgeText({ text: forcePasterSettings.isPasteEnabled ? BADGE_TEXT_ENABLED : BADGE_TEXT_DISABLED });
-    chrome.action.setBadgeBackgroundColor({ color: forcePasterSettings.isPasteEnabled ? BADGE_BG_ENABLED : BADGE_BG_DISABLED });
-    chrome.contextMenus.update("toggle", { checked: forcePasterSettings.isPasteEnabled }).catch(() => {});
+    webext.action.setBadgeText({ text: forcePasterSettings.isPasteEnabled ? BADGE_TEXT_ENABLED : BADGE_TEXT_DISABLED });
+    webext.action.setBadgeBackgroundColor({ color: forcePasterSettings.isPasteEnabled ? BADGE_BG_ENABLED : BADGE_BG_DISABLED });
+    webext.contextMenus.update("toggle", { checked: forcePasterSettings.isPasteEnabled }).catch(() => {});
 }
 
 let setExtensionUninstallURL = async debugData => {
@@ -41,7 +42,7 @@ let setExtensionUninstallURL = async debugData => {
             .join("\n")
     );
 
-    const storageKeys  = await chrome.storage.local.get([TOKEN_STORAGE_KEY, CLIENT_ID_STORAGE_KEY]);
+    const storageKeys = await webext.storage.local.get([TOKEN_STORAGE_KEY, CLIENT_ID_STORAGE_KEY]);
     const token = storageKeys[TOKEN_STORAGE_KEY];
     const clientId = storageKeys[CLIENT_ID_STORAGE_KEY];
 
@@ -55,25 +56,22 @@ let setExtensionUninstallURL = async debugData => {
     if (token) hashedParams.set("token", token);
     if (clientId) hashedParams.set("client_id", clientId);
     url.hash = hashedParams.toString();
-    
+
     console.log("Setting uninstall URL:", url.toString());
-    chrome.runtime.setUninstallURL( url.toString() );
+    webext.runtime.setUninstallURL(url.toString());
 };
 
 function buildContextMenus() {
-    chrome.contextMenus.removeAll(() => {
-        chrome.contextMenus.create({ id: "toggle", type: "checkbox", title: "Enable Force Paste", contexts: ["action"], checked: forcePasterSettings.isPasteEnabled });
-        // chrome.contextMenus.create({ id: "sep1", type: "separator", contexts: ["action"] });
-        chrome.contextMenus.create({ id: "shortcuts", title: "Manage keyboard shortcuts", contexts: ["action"] });
-        // chrome.contextMenus.create({ id: "sep2", type: "separator", contexts: ["action"] });
-        chrome.contextMenus.create({ id: "options", title: "Open dashboard", contexts: ["action"] });
-        // chrome.contextMenus.create({ id: "sep3", type: "separator", contexts: ["action"] });
-        chrome.contextMenus.create({ id: "rate", title: "⭐  Rate Force Paster", contexts: ["action"] });
-        chrome.contextMenus.create({ id: "bug", title: "🐛  Report a bug", contexts: ["action"] });
+    webext.contextMenus.removeAll(() => {
+        webext.contextMenus.create({ id: "toggle", type: "checkbox", title: "Enable Force Paste", contexts: ["action"], checked: forcePasterSettings.isPasteEnabled });
+        webext.contextMenus.create({ id: "shortcuts", title: "Manage keyboard shortcuts", contexts: ["action"] });
+        webext.contextMenus.create({ id: "options", title: "Open dashboard", contexts: ["action"] });
+        webext.contextMenus.create({ id: "rate", title: "⭐  Rate Force Paster", contexts: ["action"] });
+        webext.contextMenus.create({ id: "bug", title: "🐛  Report a bug", contexts: ["action"] });
     });
 }
 
-chrome.action.onClicked.addListener(async () => {
+webext.action.onClicked.addListener(async () => {
     const isNextEnabled = !forcePasterSettings.isPasteEnabled;
     saveAndApplyExtensionDetails({
         isPasteEnabled: isNextEnabled,
@@ -89,7 +87,7 @@ chrome.action.onClicked.addListener(async () => {
     }
 });
 
-chrome.contextMenus.onClicked.addListener(async (info) => {
+webext.contextMenus.onClicked.addListener(async (info) => {
     switch (info.menuItemId) {
         case "toggle": {
             saveAndApplyExtensionDetails({
@@ -104,25 +102,21 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
             break;
         }
         case "shortcuts":
-            try {
-                await chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
-            } catch {
-                chrome.runtime.openOptionsPage();
-            }
+            await webext.openShortcutsPage();
             break;
         case "options":
-            chrome.runtime.openOptionsPage();
+            webext.runtime.openOptionsPage();
             break;
         case "rate":
-            chrome.tabs.create({ url: "https://vashis.ht/rd/forcepaster?from=extension-context-menu" });
+            webext.tabs.create({ url: "https://vashis.ht/rd/forcepaster?from=extension-context-menu" });
             break;
         case "bug":
-            chrome.tabs.create({ url: "https://github.com/prvashisht/force-paster/issues/new" });
+            webext.tabs.create({ url: "https://github.com/prvashisht/force-paster/issues/new" });
             break;
     }
 });
 
-chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+webext.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     const { type, on } = request;
     if (type === "themechange") {
         const icon_paths = {
@@ -131,16 +125,16 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             "48": `icons/${request.mode}/icon48.png`,
             "128": `icons/${request.mode}/icon128.png`
         };
-        chrome.action.setIcon({path: icon_paths});
+        webext.action.setIcon({ path: icon_paths });
     } else if (type === "onpastestart") {
-        chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+        webext.tabs.query({ active: true, currentWindow: true }, tabs => {
             saveAndApplyExtensionDetails({
                 lastDomain: (new URL(tabs[0].url)).hostname,
                 lastTag: on,
             });
-        })
+        });
     } else if (type === "onpastecomplete") {
-        saveAndApplyExtensionDetails({ pasteCount: forcePasterSettings.pasteCount + 1, });
+        saveAndApplyExtensionDetails({ pasteCount: forcePasterSettings.pasteCount + 1 });
         try {
             await sendProxyEvent("fp_paste", {
                 tag: forcePasterSettings.lastTag ?? null,
@@ -166,7 +160,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     return true;
 });
 
-chrome.runtime.onInstalled.addListener(async installInfo => {
+webext.runtime.onInstalled.addListener(async installInfo => {
     let installDate, updateDate;
     if (installInfo.reason === "install") {
         installDate = new Date().toISOString();
@@ -174,15 +168,15 @@ chrome.runtime.onInstalled.addListener(async installInfo => {
         updateDate = new Date().toISOString();
     }
 
-    const platformInfo = await chrome.runtime.getPlatformInfo();
+    const platformInfo = await webext.runtime.getPlatformInfo();
     let debugData = {
         ...platformInfo,
         agent: navigator.userAgent,
         locale: navigator.language,
         platform: navigator.platform,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        version: chrome.runtime.getManifest().version,
-    }
+        version: webext.runtime.getManifest().version,
+    };
     if (installDate) debugData.installDate = installDate;
     if (updateDate) debugData.updateDate = updateDate;
 
@@ -211,9 +205,9 @@ chrome.runtime.onInstalled.addListener(async installInfo => {
     } else {
         // On update/reload, preserve the user's toggle state and counts.
         // Only refresh the platform/version debug fields.
-        const { forcepaster } = await chrome.storage.local.get('forcepaster');
+        const { forcepaster } = await webext.storage.local.get('forcepaster');
         saveAndApplyExtensionDetails({ ...(forcepaster || {}), ...debugData });
     }
-    chrome.action.setBadgeTextColor({ color: BADGE_TEXT_COLOR });
+    webext.action.setBadgeTextColor({ color: BADGE_TEXT_COLOR });
     buildContextMenus();
 });
