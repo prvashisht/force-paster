@@ -8,7 +8,17 @@
 set -euo pipefail
 
 VERSION=$(node -p "require('./manifest.json').version")
+NOTES_VERSION=$(node -p "require('./release-notes.json').version")
 DIST="dist"
+
+if [ "$VERSION" != "$NOTES_VERSION" ]; then
+    echo "❌  Version mismatch:"
+    echo "    manifest.json      → $VERSION"
+    echo "    release-notes.json → $NOTES_VERSION"
+    echo ""
+    echo "Update release-notes.json to version $VERSION before building."
+    exit 1
+fi
 
 # Extension source files to include in both zips
 SOURCES=(
