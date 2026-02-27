@@ -129,12 +129,29 @@ document.querySelectorAll('a[href*="github.com/prvashisht/force-paster"]').forEa
     }
 });
 
+document.getElementById('footer-link').addEventListener('click', () => track("optionsclick", { item: "footer_author" }));
+
 ['watermarker', 'signaturesync', 'classicwebsearch', 'curt'].forEach(id => {
     document.getElementById(`app-${id}`)
         ?.addEventListener('click', () => track("optionsclick", { item: `app_${id}` }));
 });
 
 document.getElementById('close-btn').addEventListener('click', () => window.close());
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            b.classList.remove('active');
+            b.setAttribute('aria-selected', 'false');
+        });
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    });
+});
 
 // ── Release notes ────────────────────────────────────────────────────────────
 
