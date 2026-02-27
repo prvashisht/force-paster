@@ -62,10 +62,10 @@ build() {
 
 echo "Building Force Paster v$VERSION ..."
 
-# Chrome/Edge: drop the Firefox-only gecko block
-build "chrome" "delete m.browser_specific_settings;"
+# Chrome/Edge: drop Firefox-only fields (gecko block + background.scripts)
+build "chrome" "delete m.browser_specific_settings; delete m.background.scripts;"
 
-# Firefox: drop the Chrome-only service_worker key (Firefox uses background.scripts)
+# Firefox: drop the Chrome/Edge-only service_worker key (Firefox uses background.scripts)
 build "firefox" "delete m.background.service_worker;"
 
 echo "Done."

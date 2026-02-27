@@ -1,14 +1,23 @@
 name: Store Deploy
 
 on:
-  release:
-    types: [published]
+  # Triggers automatically when the Release workflow completes successfully.
+  # (Using workflow_run instead of `release: published` because GitHub does not
+  # fire webhook events for releases created by GITHUB_TOKEN from another workflow.)
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       version:
         description: 'Release version to deploy (e.g. 2.3.0). Defaults to latest release.'
         required: false
         type: string
+      stores:
+        description: 'Which stores to deploy to'
+        type: choice
+        options: [all, chrome, firefox]
+        default: all
 
 permissions:
   contents: read
@@ -17,6 +26,8 @@ jobs:
   # ── Resolve which version/release to deploy ───────────────────────────────
   resolve:
     runs-on: ubuntu-latest
+    # Skip if triggered by a failed Release workflow run
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     outputs:
       version: ${{ steps.resolve.outputs.version }}
     steps:
@@ -28,11 +39,8 @@ jobs:
         run: |
           if [ -n "$INPUT_VERSION" ]; then
             echo "version=$INPUT_VERSION" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event_name }}" = "release" ]; then
-            # Strip leading 'v' from the tag name
-            echo "version=${{ github.event.release.tag_name }}" | sed 's/version=v/version=/' >> "$GITHUB_OUTPUT"
           else
-            # Fall back to latest published release
+            # Use the latest published release (covers both workflow_run and fallback manual)
             VERSION=$(gh release list --repo ${{ github.repository }} --limit 1 --json tagName -q '.[0].tagName' | sed 's/^v//')
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           fi
@@ -43,7 +51,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
-    if: needs.resolve.outputs.version != ''
+    # Skip if: no version, secrets missing check is handled inline, or user chose firefox-only
+    if: |
+      needs.resolve.outputs.version != '' &&
+      (github.event_name != 'workflow_dispatch' || inputs.stores == 'all' || inputs.stores == 'chrome')
     steps:
       - name: Check secrets
         id: check
@@ -81,7 +92,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FIREFOX_API_KEY: ${{ secrets.FIREFOX_API_KEY }}
-    if: needs.resolve.outputs.version != ''
+    if: |
+      needs.resolve.outputs.version != '' &&
+      (github.event_name != 'workflow_dispatch' || inputs.stores == 'all' || inputs.stores == 'firefox')
     steps:
       - name: Check secrets
         id: check
