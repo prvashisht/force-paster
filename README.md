@@ -126,12 +126,14 @@ Events are sent anonymously via a Cloud Functions proxy. The following events ar
 
 1. Bump `"version"` in `manifest.json`.
 2. Update `"version"` and `"notes"` in `release-notes.json` to match — the build will **fail** if they differ.
-3. Merge to `main`. The `release.yml` workflow triggers automatically, builds both zips, creates a GitHub release with auto-generated notes, and attaches the zips as assets. This in turn triggers `store-deploy.yml`, which publishes the zips automatically to the Chrome Web Store and Firefox Add-ons.
+3. Merge to `main`. The `release.yml` workflow triggers automatically, builds both zips, creates a GitHub release with auto-generated notes, and attaches the zips as assets. This in turn triggers `store-deploy.yml`, which publishes automatically to the Chrome Web Store and Firefox Add-ons.
+4. **Edge** — upload `force-paster-chrome-v*.zip` from the GitHub release manually at [Microsoft Partner Center](https://partner.microsoft.com/dashboard/microsoftedge/overview). The Chrome zip is Edge-compatible (same Chromium base; Firefox-only manifest fields are stripped by the build script).
 
 > **Checklist every release:**
 > - [ ] `manifest.json` version bumped
 > - [ ] `release-notes.json` version and notes updated
 > - [ ] README features/structure updated if new things were added
+> - [ ] Edge Add-ons updated manually via Partner Center
 
 ---
 
