@@ -1,44 +1,133 @@
-# Force Paster Chrome Extension
+# Force Paster
 
-[![Version](https://img.shields.io/badge/Version-2.2.1-blue.svg)]()
+[![Version](https://img.shields.io/github/manifest-json/v/prvashisht/force-paster)](https://github.com/prvashisht/force-paster/blob/master/manifest.json)
 
-Force Paster is a Chrome extension that enables seamless text pasting in input fields and text areas, even on websites that disable pasting. It also supports adaptive theming, making it comfortable for users in both light and dark mode.
+Force Paster is a browser extension that lets you paste text into any input field or text area — even on sites that have deliberately blocked pasting. One click enables it; one click turns it back off.
+
+---
 
 ## Features
 
-- **Effortless Text Pasting:** Paste text smoothly in input fields and text areas where pasting is typically disabled.
-- **Intuitive Toggle:** Easily enable or disable the extension with a single click.
-- **Adaptive Dark Mode Support:** Seamlessly adapts to your preferred theme, ensuring a consistent experience.
-- **Privacy First:** Force Paster prioritizes user privacy and does not collect any data.
+- **Force paste anywhere** — overrides paste-blocking on any website for `<input>` and `<textarea>` elements
+- **One-click toggle** — click the extension icon to enable or disable; the toolbar badge shows the current state (`on` / `off`)
+- **Keyboard shortcut** — toggle with **Alt+Shift+P** (remappable per browser)
+- **Right-click context menu** — toggle, open the dashboard, manage shortcuts, rate the extension, or report a bug directly from the toolbar icon
+- **Dashboard** — a settings page with a toggle, paste/toggle stats, and shortcut info; open it via the context menu or `chrome://extensions` → Details → Extension options
+- **Dark & light icons** — the toolbar icon automatically follows your system theme
+- **Cross-browser** — works on Chrome, Firefox (121+), and Edge
+
+---
 
 ## Installation
 
-You can install the extension from the [Respective browsers' Web Stores](https://vashis.ht/rd/forcepaster?from=github-readme) or follow these steps for local development:
+### From the browser store
+
+| Browser | Link |
+|---------|------|
+| Chrome / Edge | [Chrome Web Store](https://vashis.ht/rd/forcepaster?from=github-readme) |
+| Firefox | [Firefox Add-ons](https://vashis.ht/rd/forcepaster?from=github-readme) |
+
+### Load unpacked (development)
 
 1. Clone the repository:
+   ```bash
+   git clone https://github.com/prvashisht/force-paster.git
+   ```
+2. **Chrome / Edge** — navigate to `chrome://extensions/`, enable **Developer mode**, click **Load unpacked**, and select the cloned folder.
+3. **Firefox** — navigate to `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, and select `manifest.json` inside the cloned folder.
+
+---
+
+## How it works
+
 ```
-git clone https://github.com/prvashisht/force-paster.git
+User clicks icon / presses Alt+Shift+P / uses context menu
+        │
+        ▼
+service_worker.js  ←─ action.onClicked / _execute_action command / contextMenus.onClicked
+  • toggles isPasteEnabled in storage.local
+  • updates badge text ("on" / "off") and badge colour
+  • syncs the "Enable Force Paste" checkbox in the context menu
+  • dispatches analytics events (fp_toggle, fp_menu_click, etc.)
+        │
+        ▼  storage.onChanged
+content.js  (injected into every page)
+  • listens on document.body.onpaste
+  • when isPasteEnabled, intercepts the paste event, reads clipboard
+    text, and writes it directly into the focused <input>/<textarea>
+  • reports paste completion back to the service worker via runtime messages
+  • watches prefers-color-scheme and notifies the service worker so the
+    correct toolbar icon variant (light/dark) is displayed
+        │
+        ▼  (options page)
+options.html / options.js
+  • standalone dashboard — reads state from storage.local
+  • toggle sends a "setenabled" message to the service worker
+  • shows paste count, toggle count, and current keyboard shortcut
+  • sends analytics events (fp_options_open, fp_options_click) via messages
 ```
 
-2. Open Chrome and navigate to `chrome://extensions/`.
+### Browser compatibility
 
-3. Enable `Developer mode` in the top right corner.
+All Chrome/Firefox API differences are centralised in `webext.js`. The service worker and options page use `webext.*` throughout; `content.js` and `analytics.js` use the `chrome` namespace, which Firefox MV3 also exposes in those contexts.
 
-4. Click on `Load unpacked` and select the cloned repository folder.
+---
 
-## Files
+## Project structure
 
-- **`manifest.json`**: Contains metadata about the extension, including permissions, icons, and scripts.
-- **`content.js`**: Handles the content script that enables text pasting functionality.
-- **`service_worker.js`**: Manages the extension behavior in the background, including badge text and color.
+| File | Description |
+|------|-------------|
+| `manifest.json` | Extension manifest (MV3) — permissions, icons, content script registration, keyboard command, options page |
+| `webext.js` | Browser adapter — detects Chrome/Edge vs Firefox at runtime, re-exports APIs under a unified `webext` object, and adds helpers like `openShortcutsPage()` and `action.getUserSettings()` |
+| `content.js` | Content script injected into every page — intercepts paste events and forwards theme-change messages to the service worker |
+| `service_worker.js` | Background service worker — manages toggle state, badge, context menu, options page, and all analytics calls |
+| `options.html` | Dashboard markup — toggle, usage stats, keyboard shortcut info, and links |
+| `options.js` | Dashboard logic — reads/writes storage, reflects live state changes, sends analytics via service worker messages |
+| `analytics.js` | Analytics helper — proxies GA4 events through a Cloud Functions endpoint with client-ID and session management |
 
-## How to Contribute
+---
 
-Contributions are welcome! Here's how you can get involved:
+## Analytics events
 
-1. Fork the repository and create your branch from `master`.
-2. Make your changes and test thoroughly.
-3. Open a pull request, describing the changes you made.
-4. Discuss your changes with the community.
+Events are sent anonymously via a Cloud Functions proxy. The following events are tracked:
 
-Please follow our [Code of Conduct](CODE_OF_CONDUCT.md) and [Contributing Guidelines](CONTRIBUTING.md) when contributing.
+| Event | When | Key params |
+|-------|------|------------|
+| `extension_installed` | Install or update | `reason`, platform info, locale |
+| `fp_toggle` | Enable/disable toggled | `enabled`, `source` (`action_icon` / `context_menu` / `options_page`) |
+| `fp_paste` | Paste completed | `tag` (element type), `domain` |
+| `fp_menu_click` | Context menu item clicked (non-toggle) | `item` (`shortcuts` / `options` / `rate` / `bug`) |
+| `fp_options_open` | Dashboard page opened | — |
+| `fp_options_click` | Link clicked on dashboard | `item` (`rate` / `bug` / `github`) |
+
+---
+
+## Development guide
+
+### Prerequisites
+
+- Node.js is **not** required — the extension is plain JavaScript with no build step.
+
+### Workflow
+
+1. Make your changes to the source files.
+2. In Chrome, go to `chrome://extensions/` and click the **reload** icon on the Force Paster card to pick up changes.
+3. In Firefox, go to `about:debugging#/runtime/this-firefox` and click **Reload** next to Force Paster.
+4. Test on a site that blocks pasting (e.g. many banking or exam portals).
+
+### Keyboard shortcut remap
+
+- **Chrome / Edge** — `chrome://extensions/shortcuts`
+- **Firefox** — `about:addons` → Extensions → Force Paster → Manage
+
+### Releasing a new version
+
+1. Bump `"version"` in `manifest.json` (the README badge updates automatically from the manifest).
+2. Push a tag matching `v*` (e.g. `git tag v2.3.0 && git push --tags`).
+3. The `.github/workflows/publish.yml` workflow zips the extension and publishes it to the Chrome Web Store, Firefox Add-ons, and Edge Add-ons automatically (requires the store secrets to be configured in repository settings).
+
+---
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and follow the [Code of Conduct](CODE_OF_CONDUCT.md) before opening a pull request.
