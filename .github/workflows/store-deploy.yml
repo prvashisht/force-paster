@@ -67,15 +67,13 @@ jobs:
 
       - name: Upload to Chrome Web Store
         if: steps.check.outputs.skip == 'false'
-        uses: trmcnvn/upload-browser-extension@v1
+        uses: browser-actions/release-chrome-extension@latest
         with:
-          extension: force-paster-chrome-v${{ needs.resolve.outputs.version }}.zip
-          store: chrome
-          client-id: ${{ secrets.CHROME_CLIENT_ID }}
-          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
-          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          app-id: ${{ secrets.CHROME_EXTENSION_ID }}
-          publish: true
+          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          extension-path: force-paster-chrome-v${{ needs.resolve.outputs.version }}.zip
+          oauth-client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          oauth-client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          oauth-refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
 
   # ── Firefox Add-ons (AMO) ─────────────────────────────────────────────────
   firefox:
@@ -107,11 +105,11 @@ jobs:
 
       - name: Upload to Firefox Add-ons
         if: steps.check.outputs.skip == 'false'
-        uses: kewisch/publish-browser-extension@v2
+        uses: wdzeng/firefox-addon@v1
         with:
-          source: force-paster-firefox-v${{ needs.resolve.outputs.version }}.zip
-          channel: listed
-          apiKey: ${{ secrets.FIREFOX_API_KEY }}
-          apiSecret: ${{ secrets.FIREFOX_API_SECRET }}
+          addon-guid: "{8159730a-851d-4416-bd8b-5d6117192c1f}"
+          xpi-path: force-paster-firefox-v${{ needs.resolve.outputs.version }}.zip
+          jwt-issuer: ${{ secrets.FIREFOX_API_KEY }}
+          jwt-secret: ${{ secrets.FIREFOX_API_SECRET }}
 
   # Edge Add-ons: upload manually via https://partner.microsoft.com/dashboard/microsoftedge/overview
