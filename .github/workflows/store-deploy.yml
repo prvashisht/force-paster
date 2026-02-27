@@ -1,0 +1,117 @@
+name: Store Deploy
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version to deploy (e.g. 2.3.0). Defaults to latest release.'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Resolve which version/release to deploy ───────────────────────────────
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - name: Resolve version
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            echo "version=$INPUT_VERSION" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            # Strip leading 'v' from the tag name
+            echo "version=${{ github.event.release.tag_name }}" | sed 's/version=v/version=/' >> "$GITHUB_OUTPUT"
+          else
+            # Fall back to latest published release
+            VERSION=$(gh release list --repo ${{ github.repository }} --limit 1 --json tagName -q '.[0].tagName' | sed 's/^v//')
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ── Chrome Web Store ──────────────────────────────────────────────────────
+  chrome:
+    needs: resolve
+    runs-on: ubuntu-latest
+    env:
+      CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+    if: needs.resolve.outputs.version != ''
+    steps:
+      - name: Check secrets
+        id: check
+        run: |
+          if [ -z "$CHROME_CLIENT_ID" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::CHROME_CLIENT_ID not set — skipping Chrome Web Store deploy"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download Chrome zip from release
+        if: steps.check.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "v${{ needs.resolve.outputs.version }}" \
+            --repo ${{ github.repository }} \
+            --pattern "force-paster-chrome-v*.zip" \
+            --dir .
+
+      - name: Upload to Chrome Web Store
+        if: steps.check.outputs.skip == 'false'
+        uses: trmcnvn/upload-browser-extension@v1
+        with:
+          extension: force-paster-chrome-v${{ needs.resolve.outputs.version }}.zip
+          store: chrome
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          app-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          publish: true
+
+  # ── Firefox Add-ons (AMO) ─────────────────────────────────────────────────
+  firefox:
+    needs: resolve
+    runs-on: ubuntu-latest
+    env:
+      FIREFOX_API_KEY: ${{ secrets.FIREFOX_API_KEY }}
+    if: needs.resolve.outputs.version != ''
+    steps:
+      - name: Check secrets
+        id: check
+        run: |
+          if [ -z "$FIREFOX_API_KEY" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::FIREFOX_API_KEY not set — skipping Firefox Add-ons deploy"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download Firefox zip from release
+        if: steps.check.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "v${{ needs.resolve.outputs.version }}" \
+            --repo ${{ github.repository }} \
+            --pattern "force-paster-firefox-v*.zip" \
+            --dir .
+
+      - name: Upload to Firefox Add-ons
+        if: steps.check.outputs.skip == 'false'
+        uses: kewisch/publish-browser-extension@v2
+        with:
+          source: force-paster-firefox-v${{ needs.resolve.outputs.version }}.zip
+          channel: listed
+          apiKey: ${{ secrets.FIREFOX_API_KEY }}
+          apiSecret: ${{ secrets.FIREFOX_API_SECRET }}
+
+  # Edge Add-ons: upload manually via https://partner.microsoft.com/dashboard/microsoftedge/overview
