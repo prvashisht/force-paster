@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+    paths: [manifest.json]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needed to list existing tags
+
+      - name: Read version from manifest
+        id: version
+        run: echo "value=$(node -p "require('./manifest.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag already exists
+        id: tag
+        run: |
+          if git tag --list "v${{ steps.version.outputs.value }}" | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build extension zips
+        if: steps.tag.outputs.exists == 'false'
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Create GitHub release
+        if: steps.tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.value }}
+          name: v${{ steps.version.outputs.value }}
+          generate_release_notes: true
+          files: |
+            dist/force-paster-chrome-v${{ steps.version.outputs.value }}.zip
+            dist/force-paster-firefox-v${{ steps.version.outputs.value }}.zip
