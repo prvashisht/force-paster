@@ -119,6 +119,7 @@ function track(type, extra = {}) {
 track("optionsopen");
 
 document.getElementById('rate-link').addEventListener('click', () => track("optionsclick", { item: "rate" }));
+document.getElementById('bmc-link').addEventListener('click', () => track("optionsclick", { item: "bmc" }));
 document.querySelectorAll('a[href*="issues/new"]').forEach(el =>
     el.addEventListener('click', () => track("optionsclick", { item: "bug" }))
 );
