@@ -1,8 +1,6 @@
 {
-  "version": "2.5.0",
+  "version": "2.5.1",
   "notes": [
-    "Force paste now works in rich-text editors like Gmail, Notion, and Slack (contenteditable support)",
-    "Paste can no longer be blocked by sites using aggressive JavaScript event interception",
-    "React, Vue, and Angular apps now correctly detect the pasted value as a state change"
+    "Removed unused clipboardRead permission"
   ]
 }
