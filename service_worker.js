@@ -28,7 +28,10 @@ let forcePasterSettings = {
 };
 
 // Restore persisted state on service worker startup and sync the context menu checkbox.
-webext.storage.local.get(['forcepaster'], (item) => {
+// This Promise is awaited at the top of every event handler to prevent a race condition
+// where handlers fire before storage has loaded, which would cause saveAndApplyExtensionDetails
+// to merge with the blank default state and overwrite real values (e.g. isPasteEnabled: false).
+const settingsReady = webext.storage.local.get(['forcepaster']).then(item => {
     if (item.forcepaster) {
         forcePasterSettings = item.forcepaster;
         webext.contextMenus.update("toggle", { checked: forcePasterSettings.isPasteEnabled }).catch(() => {});
@@ -86,6 +89,7 @@ function buildContextMenus() {
 }
 
 webext.action.onClicked.addListener(async () => {
+    await settingsReady;
     const isNextEnabled = !forcePasterSettings.isPasteEnabled;
     saveAndApplyExtensionDetails({
         isPasteEnabled: isNextEnabled,
@@ -102,6 +106,7 @@ webext.action.onClicked.addListener(async () => {
 });
 
 webext.contextMenus.onClicked.addListener(async (info) => {
+    await settingsReady;
     switch (info.menuItemId) {
         case "toggle": {
             saveAndApplyExtensionDetails({
@@ -135,6 +140,7 @@ webext.contextMenus.onClicked.addListener(async (info) => {
 });
 
 webext.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+    await settingsReady;
     const { type, on } = request;
     if (type === "themechange") {
         const icon_paths = {

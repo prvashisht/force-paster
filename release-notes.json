@@ -1,6 +1,6 @@
 {
-  "version": "2.5.1",
+  "version": "2.5.2",
   "notes": [
-    "Removed unused clipboardRead permission"
+    "Fixed a bug where the extension could turn itself off after a period of inactivity"
   ]
 }

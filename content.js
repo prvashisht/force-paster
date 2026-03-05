@@ -8,7 +8,9 @@ chrome.storage.local.get(['forcepaster'], function(item) {
     forcePasterSettings = item.forcepaster || forcePasterSettings;
 })
 chrome.storage.onChanged.addListener(function(changes) {
-    forcePasterSettings = changes.forcepaster.newValue || forcePasterSettings;
+    if (changes.forcepaster?.newValue) {
+        forcePasterSettings = changes.forcepaster.newValue;
+    }
 });
 
 let darkModeListener = (isDarkMode) => {
