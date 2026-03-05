@@ -116,7 +116,8 @@ function track(type, extra = {}) {
 }
 
 // Track dashboard open and link clicks
-track("optionsopen");
+const openSource = new URLSearchParams(window.location.search).get('source') ?? 'manual';
+track("optionsopen", { source: openSource });
 
 document.getElementById('rate-link').addEventListener('click', () => track("optionsclick", { item: "rate" }));
 document.getElementById('bmc-link').addEventListener('click', () => track("optionsclick", { item: "bmc" }));
