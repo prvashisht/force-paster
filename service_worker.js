@@ -164,7 +164,7 @@ webext.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             source: "paste_event"
         }).catch(e => console.warn("analytics fp_paste failed", e));
     } else if (type === "optionsopen") {
-        sendProxyEvent("fp_options_open").catch(() => {});
+        sendProxyEvent("fp_options_open", { source: request.source ?? "manual" }).catch(() => {});
         sendResponse({ ok: true });
     } else if (type === "optionsclick") {
         sendProxyEvent("fp_options_click", { item: request.item }).catch(() => {});
