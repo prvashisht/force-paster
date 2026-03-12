@@ -98,7 +98,8 @@ webext.action.onClicked.addListener(async () => {
     try {
         await sendProxyEvent("fp_toggle", {
             enabled: isNextEnabled,
-            source: "action_icon"
+            source: "action_icon",
+            paste_count: forcePasterSettings.pasteCount,
         });
     } catch (e) {
         console.warn("analytics fp_toggle failed", e);
@@ -114,7 +115,7 @@ webext.contextMenus.onClicked.addListener(async (info) => {
                 clickCount: forcePasterSettings.clickCount + 1,
             });
             try {
-                await sendProxyEvent("fp_toggle", { enabled: info.checked, source: "context_menu" });
+                await sendProxyEvent("fp_toggle", { enabled: info.checked, source: "context_menu", paste_count: forcePasterSettings.pasteCount });
             } catch (e) {
                 console.warn("analytics fp_toggle failed", e);
             }
@@ -159,10 +160,11 @@ webext.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         });
     } else if (type === "onpastecomplete") {
         saveAndApplyExtensionDetails({ pasteCount: forcePasterSettings.pasteCount + 1 });
+        const showRatingPrompt = shouldShowRatingPrompt(forcePasterSettings);
         // Respond immediately so the message channel doesn't close before analytics finishes.
         sendResponse({
             totalPastes: forcePasterSettings.pasteCount,
-            showRatingPrompt: shouldShowRatingPrompt(forcePasterSettings),
+            showRatingPrompt,
         });
         sendProxyEvent("fp_paste", {
             tag: forcePasterSettings.lastTag ?? null,
@@ -170,10 +172,10 @@ webext.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             source: "paste_event"
         }).catch(e => console.warn("analytics fp_paste failed", e));
     } else if (type === "optionsopen") {
-        sendProxyEvent("fp_options_open", { source: request.source ?? "manual" }).catch(() => {});
+        sendProxyEvent("fp_options_open", { source: request.source ?? "manual", paste_count: forcePasterSettings.pasteCount }).catch(() => {});
         sendResponse({ ok: true });
     } else if (type === "optionsclick") {
-        sendProxyEvent("fp_options_click", { item: request.item }).catch(() => {});
+        sendProxyEvent("fp_options_click", { item: request.item, paste_count: forcePasterSettings.pasteCount }).catch(() => {});
         sendResponse({ ok: true });
     } else if (type === "ratingresponse") {
         let ratingState, snoozeGap;
@@ -190,15 +192,17 @@ webext.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             webext.tabs.create({ url: RATING_STORE_URL });
         }
         sendResponse({ ok: true });
-        sendProxyEvent("fp_rating_prompt", { choice: request.choice })
-            .catch(e => console.warn("analytics fp_rating_prompt failed", e));
+        sendProxyEvent("fp_rating_prompt", {
+            choice: request.choice,
+            paste_count: forcePasterSettings.pasteCount,
+        }).catch(e => console.warn("analytics fp_rating_prompt failed", e));
     } else if (type === "setenabled") {
         saveAndApplyExtensionDetails({
             isPasteEnabled: request.enabled,
             clickCount: forcePasterSettings.clickCount + 1,
         });
         try {
-            await sendProxyEvent("fp_toggle", { enabled: request.enabled, source: "options_page" });
+            await sendProxyEvent("fp_toggle", { enabled: request.enabled, source: "options_page", paste_count: forcePasterSettings.pasteCount });
         } catch (e) {
             console.warn("analytics fp_toggle failed", e);
         }
@@ -227,10 +231,17 @@ webext.runtime.onInstalled.addListener(async installInfo => {
     if (installDate) debugData.installDate = installDate;
     if (updateDate) debugData.updateDate = updateDate;
 
+    // Read existing settings first so paste_count is available for the event.
+    const { forcepaster: existingSettings } = await webext.storage.local.get('forcepaster');
+    const existingPasteCount = existingSettings?.pasteCount ?? 0;
+
     try {
         await sendProxyEvent(
             "extension_installed",
-            { reason: installInfo.reason },
+            {
+                reason: installInfo.reason,
+                paste_count: existingPasteCount,
+            },
             {
                 userProperties: {
                     ...debugData,
@@ -252,8 +263,7 @@ webext.runtime.onInstalled.addListener(async installInfo => {
     } else {
         // On update/reload, preserve the user's toggle state and counts.
         // Only refresh the platform/version debug fields.
-        const { forcepaster } = await webext.storage.local.get('forcepaster');
-        saveAndApplyExtensionDetails({ ...(forcepaster || {}), ...debugData });
+        saveAndApplyExtensionDetails({ ...(existingSettings || {}), ...debugData });
     }
     webext.action.setBadgeTextColor({ color: BADGE_TEXT_COLOR });
     buildContextMenus();
