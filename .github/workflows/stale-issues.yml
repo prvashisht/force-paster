@@ -1,0 +1,48 @@
+name: Stale Issues
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # Only process issues that have the 'question' label
+          only-labels: question
+
+          # Staleness thresholds
+          days-before-stale: 7
+          days-before-close: 7
+
+          # Labels
+          stale-issue-label: stale
+          close-issue-label: closed-stale
+
+          # Comments
+          stale-issue-message: >
+            Hi there! We asked a follow-up question on this issue a week ago
+            and haven't heard back yet. Could you take a moment to respond?
+
+
+            If we don't hear back in the next 7 days, this issue will be
+            closed automatically. Feel free to reopen it at any time if you
+            have more information.
+          close-issue-message: >
+            Closing this issue due to no response after 14 days. If you have
+            more information or run into this again, please feel free to
+            reopen or open a new issue. Thanks for reporting!
+
+          # Don't let actions/stale remove stale label on update —
+          # stale-response.yml handles that with author-only logic
+          remove-stale-when-updated: false
+
+          # Ignore PRs entirely
+          days-before-pr-stale: -1
+          days-before-pr-close: -1

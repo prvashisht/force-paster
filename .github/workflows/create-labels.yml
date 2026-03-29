@@ -1,0 +1,49 @@
+name: Create Labels (run once)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  create-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = [
+              {
+                name: 'stale',
+                color: 'c2c2c2',
+                description: 'No activity after 7 days — awaiting author response',
+              },
+              {
+                name: 'closed-stale',
+                color: 'b60205',
+                description: 'Closed automatically due to no response',
+              },
+              {
+                name: 'needs-attention',
+                color: 'e4e669',
+                description: 'Author responded to a stale issue — needs owner review',
+              },
+            ];
+
+            for (const label of labels) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ...label,
+                });
+                console.log(`Created label: ${label.name}`);
+              } catch (e) {
+                if (e.status === 422) {
+                  console.log(`Label already exists, skipping: ${label.name}`);
+                } else {
+                  throw e;
+                }
+              }
+            }
