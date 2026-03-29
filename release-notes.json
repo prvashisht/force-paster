@@ -1,6 +1,6 @@
 {
-  "version": "2.5.2",
+  "version": "2.5.3",
   "notes": [
-    "Fixed a bug where the extension could turn itself off after a period of inactivity"
+    "Rich text paste in rich editors (e.g. Notion): formatting is preserved by re-dispatching the clipboard to the page, with sensible fallbacks when a site blocks paste"
   ]
 }
