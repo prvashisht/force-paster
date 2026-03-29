@@ -28,11 +28,14 @@ darkModeListener(darkModePreference);
 const isInputOrTextarea = (el) => ["input", "textarea"].includes(el.tagName.toLowerCase());
 const isContentEditable = (el) => !!(el && el.isContentEditable);
 
+let _syntheticPaste = false;
+
 // Capture phase at document level — runs before every page-registered listener
 // (both capture and bubble), so sites cannot block us with stopPropagation or
 // stopImmediatePropagation on their own handlers.
 document.addEventListener('paste', event => {
     if (!forcePasterSettings.isPasteEnabled) return;
+    if (_syntheticPaste) return;
 
     const currEle = document.activeElement;
     const isField    = isInputOrTextarea(currEle);
@@ -53,7 +56,7 @@ document.addEventListener('paste', event => {
     if (isField) {
         pasteIntoInputField(currEle, pastedText);
     } else {
-        pasteIntoContentEditable(currEle, pastedText);
+        pasteIntoContentEditable(currEle, pastedText, clipboardData);
     }
 
     chrome.runtime.sendMessage({ type: "onpastecomplete" }, response => {
@@ -91,12 +94,41 @@ function pasteIntoInputField(el, pastedText) {
 
 // ---------------------------------------------------------------------------
 // contenteditable  (Gmail, Notion, Slack-style editors)
-// execCommand('insertText') goes through Blink's editing pipeline and fires
-// beforeinput + input natively — React / Vue / Angular pick these up without
-// any extra hacks. Falls back to the Selection API if execCommand is blocked.
+//
+// Strategy: re-dispatch a synthetic ClipboardEvent carrying the original
+// clipboard payload (all MIME types) so the site's own editor can handle
+// the paste natively — preserving rich formatting in apps like Notion.
+//
+// If the site blocked the paste (no DOM change), fall back to insertHTML
+// (rich) or insertText (plain) via execCommand / Selection API.
 // ---------------------------------------------------------------------------
-function pasteIntoContentEditable(el, pastedText) {
+function pasteIntoContentEditable(el, pastedText, originalClipboard) {
     el.focus();
+
+    const dt = new DataTransfer();
+    for (const type of originalClipboard.types) {
+        dt.setData(type, originalClipboard.getData(type));
+    }
+
+    const syntheticEvent = new ClipboardEvent('paste', {
+        clipboardData: dt,
+        bubbles: true,
+        cancelable: true,
+    });
+
+    const before = el.innerHTML;
+    _syntheticPaste = true;
+    el.dispatchEvent(syntheticEvent);
+    _syntheticPaste = false;
+
+    if (el.innerHTML !== before) return;
+
+    const pastedHtml = originalClipboard.getData('text/html');
+    if (pastedHtml) {
+        const inserted = document.execCommand('insertHTML', false, pastedHtml);
+        if (inserted) return;
+    }
+
     const inserted = document.execCommand('insertText', false, pastedText);
     if (!inserted) {
         insertTextViaSelectionAPI(el, pastedText);
