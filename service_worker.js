@@ -10,6 +10,36 @@ const RATING_SNOOZE_MULTIPLIER = 1.5;
 const RATING_SNOOZE_CAP = 100;
 const RATING_STORE_URL = "https://vashis.ht/rd/forcepaster?from=forcepaster-extension-rating_prompt";
 
+function getPasteCountBucket(pasteCount) {
+    if (!Number.isFinite(pasteCount) || pasteCount <= 0) return "0";
+
+    if (pasteCount <= 5) return String(pasteCount);
+    if (pasteCount <= 50) {
+        const start = Math.floor((pasteCount - 1) / 5) * 5 + 1;
+        const end = start + 4;
+        return `${start}-${end}`;
+    }
+    if (pasteCount <= 1000) {
+        const start = Math.floor((pasteCount - 1) / 50) * 50 + 1;
+        const end = start + 49;
+        return `${start}-${end}`;
+    }
+    if (pasteCount <= 5000) {
+        const start = Math.floor((pasteCount - 1) / 500) * 500 + 1;
+        const end = start + 499;
+        return `${start}-${end}`;
+    }
+
+    return "5000+";
+}
+
+function withPasteCountAnalytics(pasteCount) {
+    return {
+        paste_count: pasteCount,
+        paste_count_bucket: getPasteCountBucket(pasteCount),
+    };
+}
+
 function shouldShowRatingPrompt(settings) {
     const { pasteCount, ratingState } = settings;
     if (!pasteCount) return false;
@@ -99,7 +129,7 @@ webext.action.onClicked.addListener(async () => {
         await sendProxyEvent("fp_toggle", {
             enabled: isNextEnabled,
             source: "action_icon",
-            paste_count: forcePasterSettings.pasteCount,
+            ...withPasteCountAnalytics(forcePasterSettings.pasteCount),
         });
     } catch (e) {
         console.warn("analytics fp_toggle failed", e);
@@ -115,7 +145,11 @@ webext.contextMenus.onClicked.addListener(async (info) => {
                 clickCount: forcePasterSettings.clickCount + 1,
             });
             try {
-                await sendProxyEvent("fp_toggle", { enabled: info.checked, source: "context_menu", paste_count: forcePasterSettings.pasteCount });
+                await sendProxyEvent("fp_toggle", {
+                    enabled: info.checked,
+                    source: "context_menu",
+                    ...withPasteCountAnalytics(forcePasterSettings.pasteCount),
+                });
             } catch (e) {
                 console.warn("analytics fp_toggle failed", e);
             }
@@ -160,22 +194,30 @@ webext.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         });
     } else if (type === "onpastecomplete") {
         saveAndApplyExtensionDetails({ pasteCount: forcePasterSettings.pasteCount + 1 });
+        const totalPastes = forcePasterSettings.pasteCount;
         const showRatingPrompt = shouldShowRatingPrompt(forcePasterSettings);
         // Respond immediately so the message channel doesn't close before analytics finishes.
         sendResponse({
-            totalPastes: forcePasterSettings.pasteCount,
+            totalPastes,
             showRatingPrompt,
         });
         sendProxyEvent("fp_paste", {
             tag: forcePasterSettings.lastTag ?? null,
             domain: forcePasterSettings.lastDomain ?? null,
-            source: "paste_event"
+            source: "paste_event",
+            ...withPasteCountAnalytics(totalPastes),
         }).catch(e => console.warn("analytics fp_paste failed", e));
     } else if (type === "optionsopen") {
-        sendProxyEvent("fp_options_open", { source: request.source ?? "manual", paste_count: forcePasterSettings.pasteCount }).catch(() => {});
+        sendProxyEvent("fp_options_open", {
+            source: request.source ?? "manual",
+            ...withPasteCountAnalytics(forcePasterSettings.pasteCount),
+        }).catch(() => {});
         sendResponse({ ok: true });
     } else if (type === "optionsclick") {
-        sendProxyEvent("fp_options_click", { item: request.item, paste_count: forcePasterSettings.pasteCount }).catch(() => {});
+        sendProxyEvent("fp_options_click", {
+            item: request.item,
+            ...withPasteCountAnalytics(forcePasterSettings.pasteCount),
+        }).catch(() => {});
         sendResponse({ ok: true });
     } else if (type === "ratingresponse") {
         let ratingState, snoozeGap;
@@ -194,7 +236,7 @@ webext.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         sendResponse({ ok: true });
         sendProxyEvent("fp_rating_prompt", {
             choice: request.choice,
-            paste_count: forcePasterSettings.pasteCount,
+            ...withPasteCountAnalytics(forcePasterSettings.pasteCount),
         }).catch(e => console.warn("analytics fp_rating_prompt failed", e));
     } else if (type === "setenabled") {
         saveAndApplyExtensionDetails({
@@ -202,7 +244,11 @@ webext.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             clickCount: forcePasterSettings.clickCount + 1,
         });
         try {
-            await sendProxyEvent("fp_toggle", { enabled: request.enabled, source: "options_page", paste_count: forcePasterSettings.pasteCount });
+            await sendProxyEvent("fp_toggle", {
+                enabled: request.enabled,
+                source: "options_page",
+                ...withPasteCountAnalytics(forcePasterSettings.pasteCount),
+            });
         } catch (e) {
             console.warn("analytics fp_toggle failed", e);
         }
@@ -240,7 +286,7 @@ webext.runtime.onInstalled.addListener(async installInfo => {
             "extension_installed",
             {
                 reason: installInfo.reason,
-                paste_count: existingPasteCount,
+                ...withPasteCountAnalytics(existingPasteCount),
             },
             {
                 userProperties: {
