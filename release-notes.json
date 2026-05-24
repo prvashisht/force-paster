@@ -1,6 +1,6 @@
 {
-  "version": "2.5.3",
+  "version": "2.5.4",
   "notes": [
-    "Rich text paste in rich editors (e.g. Notion): formatting is preserved by re-dispatching the clipboard to the page, with sensible fallbacks when a site blocks paste"
+    "Fix keyboard shortcut management links in Brave and other Chromium browsers that expose the WebExtensions `browser` namespace"
   ]
 }

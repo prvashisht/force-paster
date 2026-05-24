@@ -7,12 +7,14 @@
  *   webext.openShortcutsPage()
  *
  * Detection:
- *   - Firefox MV3 exposes a `browser` global with a Promise-based API.
- *   - Chrome and Edge expose `chrome`. Edge also mirrors under `chrome`.
+ *   - Firefox exposes runtime.getBrowserInfo().
+ *   - Chromium browsers may expose both `chrome` and `browser`, so the
+ *     presence of `browser` alone is not a Firefox signal.
  *   - We prefer `browser` on Firefox so we get native Promises everywhere.
  */
 
-const _isFirefox = typeof browser !== 'undefined' && !!browser.runtime?.getManifest;
+const _isFirefox = typeof browser !== 'undefined'
+    && typeof browser.runtime?.getBrowserInfo === 'function';
 const _api = _isFirefox ? browser : chrome;
 
 export const isFirefox = _isFirefox;
@@ -27,7 +29,7 @@ async function openShortcutsPage() {
         // Firefox does not support chrome:// URLs; about:addons is the equivalent.
         await _api.tabs.create({ url: 'about:addons' });
     } else {
-        // Chrome and Edge
+        // Chromium browsers
         await _api.tabs.create({ url: 'chrome://extensions/shortcuts' });
     }
 }

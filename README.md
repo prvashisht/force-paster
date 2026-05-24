@@ -14,7 +14,7 @@ Force Paster is a browser extension that lets you paste text into any input fiel
 - **Right-click context menu** — toggle, open the dashboard, manage shortcuts, rate the extension, or report a bug directly from the toolbar icon
 - **Dashboard** — a tabbed settings page (Settings / What's new / More); open it via the context menu or `chrome://extensions` → Details → Extension options
 - **Dark & light icons** — the toolbar icon automatically follows your system theme
-- **Cross-browser** — works on Chrome, Firefox (121+), and Edge
+- **Cross-browser** — works on Chrome, Brave, Firefox (121+), and Edge
 
 ---
 
@@ -24,7 +24,7 @@ Force Paster is a browser extension that lets you paste text into any input fiel
 
 | Browser | Link |
 |---------|------|
-| Chrome / Edge | [Chrome Web Store](https://vashis.ht/rd/forcepaster?from=github-readme) |
+| Chrome / Brave / Edge | [Chrome Web Store](https://vashis.ht/rd/forcepaster?from=github-readme) |
 | Firefox | [Firefox Add-ons](https://vashis.ht/rd/forcepaster?from=github-readme) |
 
 ### Load unpacked (development)
@@ -33,7 +33,7 @@ Force Paster is a browser extension that lets you paste text into any input fiel
    ```bash
    git clone https://github.com/prvashisht/force-paster.git
    ```
-2. **Chrome / Edge** — navigate to `chrome://extensions/`, enable **Developer mode**, click **Load unpacked**, and select the cloned folder.
+2. **Chrome / Brave / Edge** — navigate to `chrome://extensions/`, enable **Developer mode**, click **Load unpacked**, and select the cloned folder.
 3. **Firefox** — navigate to `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, and select `manifest.json` inside the cloned folder.
 
 ---
@@ -69,7 +69,7 @@ options.html / options.js
 
 ### Browser compatibility
 
-All Chrome/Firefox API differences are centralised in `webext.js`. The service worker and options page use `webext.*` throughout; `content.js` and `analytics.js` use the `chrome` namespace, which Firefox MV3 also exposes in those contexts.
+All Chromium/Firefox API differences are centralised in `webext.js`. The service worker and options page use `webext.*` throughout; `content.js` and `analytics.js` use the `chrome` namespace, which Firefox MV3 also exposes in those contexts.
 
 ---
 
@@ -78,7 +78,7 @@ All Chrome/Firefox API differences are centralised in `webext.js`. The service w
 | File | Description |
 |------|-------------|
 | `manifest.json` | Extension manifest (MV3) — permissions, icons, content script registration, keyboard command, options page |
-| `webext.js` | Browser adapter — detects Chrome/Edge vs Firefox at runtime, re-exports APIs under a unified `webext` object, and adds helpers like `openShortcutsPage()` and `action.getUserSettings()` |
+| `webext.js` | Browser adapter — detects Chromium browsers vs Firefox at runtime, re-exports APIs under a unified `webext` object, and adds helpers like `openShortcutsPage()` and `action.getUserSettings()` |
 | `content.js` | Content script injected into every page — intercepts paste events and forwards theme-change messages to the service worker |
 | `service_worker.js` | Background service worker — manages toggle state, badge, context menu, options page, and all analytics calls |
 | `options.html` | Dashboard markup — tabbed UI with Settings, What's new, and More panels |
@@ -119,7 +119,7 @@ Events are sent anonymously via a Cloud Functions proxy. The following events ar
 
 ### Keyboard shortcut remap
 
-- **Chrome / Edge** — `chrome://extensions/shortcuts`
+- **Chrome / Brave / Edge** — `chrome://extensions/shortcuts`
 - **Firefox** — `about:addons` → Extensions → Force Paster → Manage
 
 ### Releasing a new version
@@ -127,7 +127,7 @@ Events are sent anonymously via a Cloud Functions proxy. The following events ar
 1. Bump `"version"` in `manifest.json`.
 2. Update `"version"` and `"notes"` in `release-notes.json` to match — the build will **fail** if they differ.
 3. Merge to `main`. The `release.yml` workflow triggers automatically, builds both zips, creates a GitHub release with auto-generated notes, and attaches the zips as assets. This in turn triggers `store-deploy.yml`, which publishes automatically to the Chrome Web Store and Firefox Add-ons.
-4. **Edge** — upload `force-paster-chrome-v*.zip` from the GitHub release manually at [Microsoft Partner Center](https://partner.microsoft.com/dashboard/microsoftedge/overview). The Chrome zip is Edge-compatible (same Chromium base; Firefox-only manifest fields are stripped by the build script).
+4. **Edge** — upload `force-paster-chrome-v*.zip` from the GitHub release manually at [Microsoft Partner Center](https://partner.microsoft.com/dashboard/microsoftedge/overview). The Chrome zip is compatible with Chromium browsers such as Brave and Edge; Firefox-only manifest fields are stripped by the build script.
 
 > **Checklist every release:**
 > - [ ] `manifest.json` version bumped
