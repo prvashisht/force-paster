@@ -29,7 +29,7 @@ async function openShortcutsPage() {
         // Firefox does not support chrome:// URLs; about:addons is the equivalent.
         await _api.tabs.create({ url: 'about:addons' });
     } else {
-        // Chrome and Edge
+        // Chromium browsers
         await _api.tabs.create({ url: 'chrome://extensions/shortcuts' });
     }
 }
