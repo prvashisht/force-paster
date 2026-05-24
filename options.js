@@ -1,6 +1,8 @@
 // Inline adapter: options pages run in a window (not a worker), so we skip the ES module.
-// Firefox MV3 supports both `browser` and `chrome` in extension pages; prefer `browser`.
-const webext = (typeof browser !== 'undefined' && browser.runtime) ? browser : chrome;
+// Chromium browsers may expose `browser`; runtime.getBrowserInfo is Firefox-specific.
+const isFirefoxBrowser = typeof browser !== 'undefined'
+    && typeof browser.runtime?.getBrowserInfo === 'function';
+const webext = isFirefoxBrowser ? browser : chrome;
 
 const manifest = webext.runtime.getManifest();
 document.getElementById('version').textContent = `v${manifest.version}`;
@@ -68,8 +70,7 @@ async function loadShortcut() {
     }
 
     // Show browser-appropriate remap hint
-    const isFirefox = typeof browser !== 'undefined';
-    if (isFirefox) {
+    if (isFirefoxBrowser) {
         hintEl.innerHTML = 'To remap, go to <code>about:addons</code> → Extensions → Force Paster → Manage.';
     } else {
         hintEl.innerHTML = 'To remap, open <code>chrome://extensions/shortcuts</code> in your address bar.';
@@ -80,7 +81,6 @@ async function loadShortcut() {
 
 const pinCard = document.getElementById('pin-card');
 const pinDesc = document.getElementById('pin-card-desc');
-const isFirefoxBrowser = typeof browser !== 'undefined';
 
 function setPinCardVisible(isOnToolbar) {
     if (isOnToolbar) {
