@@ -1,5 +1,5 @@
 // --- GA Proxy config ---
-const PROXY_BASE_URL = "https://asia-south1-extensions-analytics-prod.cloudfunctions.net/forcepaster-ga-proxy";
+const PROXY_BASE_URL = "https://asia-south1-extensions-analytics-prod.cloudfunctions.net/extensions-ga-proxy";
 export const TOKEN_STORAGE_KEY = "forcepaster_install_token";
 export const CLIENT_ID_STORAGE_KEY = "forcepaster_ga_client_id";
 const SESSION_STORAGE_KEY = "forcepaster_ga_session";
@@ -48,6 +48,7 @@ async function registerInstallToken() {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "X-Extension-App": "forcepaster",
       "X-Extension-Id": chrome.runtime.id
     },
     body: JSON.stringify({})
@@ -109,6 +110,7 @@ export async function sendProxyEvent(eventName, params = {}, opts = {}) {
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${bearerToken}`,
+        "X-Extension-App": "forcepaster",
         "X-Extension-Id": chrome.runtime.id
       },
       body: JSON.stringify(payload)

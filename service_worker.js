@@ -280,10 +280,13 @@ webext.runtime.onInstalled.addListener(async installInfo => {
     // Read existing settings first so paste_count is available for the event.
     const { forcepaster: existingSettings } = await webext.storage.local.get('forcepaster');
     const existingPasteCount = existingSettings?.pasteCount ?? 0;
+    const lifecycleEventName = installInfo.reason === "install"
+        ? "fp_extension_installed"
+        : "fp_extension_updated";
 
     try {
         await sendProxyEvent(
-            "extension_installed",
+            lifecycleEventName,
             {
                 reason: installInfo.reason,
                 ...withPasteCountAnalytics(existingPasteCount),

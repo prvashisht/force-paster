@@ -1,6 +1,6 @@
 {
-  "version": "2.5.4",
+  "version": "2.5.5",
   "notes": [
-    "Fix keyboard shortcut management links in Brave and other Chromium browsers that expose the WebExtensions `browser` namespace"
+    "Migrate analytics events to the generic GA proxy with separate install and update lifecycle events"
   ]
 }
