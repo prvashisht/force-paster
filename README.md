@@ -4,6 +4,8 @@
 
 Force Paster is a browser extension that lets you paste text into any input field or text area — even on sites that have deliberately blocked pasting. One click enables it; one click turns it back off.
 
+[Privacy Policy](PRIVACY_POLICY.md)
+
 ---
 
 ## Features
@@ -85,16 +87,18 @@ All Chromium/Firefox API differences are centralised in `webext.js`. The service
 | `options.js` | Dashboard logic — reads/writes storage, reflects live state changes, loads release notes, sends analytics via service worker messages |
 | `release-notes.json` | Current version's release notes — bundled with the extension and displayed in the What's new tab |
 | `analytics.js` | Analytics helper — proxies GA4 events through a Cloud Functions endpoint with client-ID and session management |
+| `PRIVACY_POLICY.md` | Privacy policy — documents local storage, clipboard handling, analytics, and uninstall-page data |
 
 ---
 
 ## Analytics events
 
-Events are sent anonymously via a Cloud Functions proxy. The following events are tracked:
+Events are sent anonymously via the generic Cloud Functions GA proxy, identified as Force Paster with `X-Extension-App: forcepaster`. Existing install token, client ID, and session storage keys are retained for continuity. Analytics failures are logged and do not block extension behavior.
 
 | Event | When | Key params |
 |-------|------|------------|
-| `extension_installed` | Install or update | `reason`, platform info, locale |
+| `fp_extension_installed` | First install | `reason`, platform info, locale |
+| `fp_extension_updated` | Extension update | `reason`, platform info, locale |
 | `fp_toggle` | Enable/disable toggled | `enabled`, `source` (`action_icon` / `context_menu` / `options_page`) |
 | `fp_paste` | Paste completed | `tag` (element type), `domain` |
 | `fp_menu_click` | Context menu item clicked (non-toggle) | `item` (`shortcuts` / `options` / `rate` / `bug`) |
