@@ -100,8 +100,8 @@ function pasteIntoInputField(el, pastedText) {
 // editor can handle the paste natively — preserving rich formatting in
 // apps like Notion and image attachments in apps like ChatGPT.
 //
-// If the site blocked the paste (no DOM change), fall back to insertHTML
-// (rich) or insertText (plain) via execCommand / Selection API.
+// If the site blocked the paste (no DOM mutation observed), fall back to
+// insertHTML (rich) or insertText (plain) via execCommand / Selection API.
 // ---------------------------------------------------------------------------
 function pasteIntoContentEditable(el, pastedText, originalClipboard) {
     el.focus();
@@ -123,12 +123,24 @@ function pasteIntoContentEditable(el, pastedText, originalClipboard) {
         cancelable: true,
     });
 
-    const before = el.innerHTML;
+    // Track actual DOM mutations rather than diffing innerHTML before/after.
+    // If the pasted text is identical to the replaced selection (e.g. copying
+    // "abc", selecting "abc", pasting "abc"), the site's editor still deletes
+    // the selection and inserts new nodes, but the resulting innerHTML string
+    // ends up unchanged — an innerHTML comparison would wrongly conclude the
+    // site ignored the paste and fall through to inserting the text a second
+    // time, producing a duplicate ("abcabc").
+    const observer = new MutationObserver(() => {});
+    observer.observe(el, { childList: true, subtree: true, characterData: true, attributes: true });
+
     _syntheticPaste = true;
     el.dispatchEvent(syntheticEvent);
     _syntheticPaste = false;
 
-    if (el.innerHTML !== before) return;
+    const handledBySite = observer.takeRecords().length > 0;
+    observer.disconnect();
+
+    if (handledBySite) return;
 
     const pastedHtml = originalClipboard.getData('text/html');
     if (pastedHtml) {
