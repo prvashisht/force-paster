@@ -100,8 +100,9 @@ function pasteIntoInputField(el, pastedText) {
 // editor can handle the paste natively — preserving rich formatting in
 // apps like Notion and image attachments in apps like ChatGPT.
 //
-// If the site blocked the paste (no DOM mutation observed), fall back to
-// insertHTML (rich) or insertText (plain) via execCommand / Selection API.
+// If the site blocked the paste (no content mutation and no caret movement),
+// fall back to insertHTML (rich) or insertText (plain) via execCommand /
+// Selection API.
 // ---------------------------------------------------------------------------
 function pasteIntoContentEditable(el, pastedText, originalClipboard) {
     el.focus();
@@ -123,32 +124,38 @@ function pasteIntoContentEditable(el, pastedText, originalClipboard) {
         cancelable: true,
     });
 
-    // Detect whether the site's editor actually inserted content by observing
-    // content mutations rather than diffing innerHTML before/after. If the
-    // pasted text is identical to the replaced selection (e.g. copying "abc",
-    // selecting "abc", pasting "abc"), the editor still deletes the selection
-    // and inserts new nodes, but the resulting innerHTML string ends up
-    // unchanged — an innerHTML comparison would wrongly conclude the site
-    // ignored the paste and fall through to inserting the text a second time,
-    // producing a duplicate ("abcabc").
+    // Decide whether the site's editor handled the re-dispatched paste itself.
+    // We combine two signals, because neither is sufficient alone:
     //
-    // Only childList / characterData count as "handled". We deliberately do NOT
-    // observe attributes: sites that block paste often call preventDefault()
-    // and then mutate cosmetic state (e.g. classList.add('blocked') or a
-    // validation attribute) without inserting anything. Treating those as
-    // "handled" would skip our fallback and paste nothing at all — defeating
-    // the extension on exactly the paste-blocking sites it exists to help.
+    // 1. A content mutation (childList / characterData). We deliberately do NOT
+    //    observe attributes: sites that block paste often call preventDefault()
+    //    and then mutate cosmetic state (e.g. classList.add('blocked')) without
+    //    inserting anything — treating that as "handled" would skip our
+    //    fallback and paste nothing on the very sites the extension targets.
+    //
+    // 2. A selection change. React-based editors (Notion) update an internal
+    //    model and let React reconcile the DOM. When the pasted text equals the
+    //    replaced selection (copy "abc", select "abc", paste "abc"), the text
+    //    node value is unchanged, so React performs NO DOM mutation — yet the
+    //    editor still handled the paste and collapsed the caret after the text.
+    //    A pure content-mutation check (or the old innerHTML diff) misses this
+    //    and runs the fallback, inserting a second "abc" -> "abcabc". The caret
+    //    move survives React's diffing and reliably distinguishes "handled"
+    //    from a blocking site, which leaves the original range selected.
     const observer = new MutationObserver(() => {});
     observer.observe(el, { childList: true, subtree: true, characterData: true });
+
+    const beforeSelection = snapshotSelection();
 
     _syntheticPaste = true;
     el.dispatchEvent(syntheticEvent);
     _syntheticPaste = false;
 
-    const handledBySite = observer.takeRecords().length > 0;
+    const contentMutated  = observer.takeRecords().length > 0;
     observer.disconnect();
+    const selectionMoved  = selectionChangedSince(beforeSelection);
 
-    if (handledBySite) return;
+    if (contentMutated || selectionMoved) return;
 
     const pastedHtml = originalClipboard.getData('text/html');
     if (pastedHtml) {
@@ -160,6 +167,30 @@ function pasteIntoContentEditable(el, pastedText, originalClipboard) {
     if (!inserted) {
         insertTextViaSelectionAPI(el, pastedText);
     }
+}
+
+// Snapshot the current selection's boundary points so we can tell afterwards
+// whether an editor moved the caret (e.g. collapsed a range after inserting).
+function snapshotSelection() {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return null;
+    return {
+        anchorNode:   sel.anchorNode,
+        anchorOffset: sel.anchorOffset,
+        focusNode:    sel.focusNode,
+        focusOffset:  sel.focusOffset,
+        isCollapsed:  sel.isCollapsed,
+    };
+}
+
+function selectionChangedSince(before) {
+    const after = snapshotSelection();
+    if (!before || !after) return false;
+    return before.anchorNode   !== after.anchorNode   ||
+           before.anchorOffset !== after.anchorOffset ||
+           before.focusNode    !== after.focusNode    ||
+           before.focusOffset  !== after.focusOffset  ||
+           before.isCollapsed  !== after.isCollapsed;
 }
 
 function insertTextViaSelectionAPI(container, text) {
