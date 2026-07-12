@@ -96,8 +96,9 @@ function pasteIntoInputField(el, pastedText) {
 // contenteditable  (Gmail, Notion, Slack-style editors)
 //
 // Strategy: re-dispatch a synthetic ClipboardEvent carrying the original
-// clipboard payload (all MIME types) so the site's own editor can handle
-// the paste natively — preserving rich formatting in apps like Notion.
+// clipboard payload (all MIME types, plus any files) so the site's own
+// editor can handle the paste natively — preserving rich formatting in
+// apps like Notion and image attachments in apps like ChatGPT.
 //
 // If the site blocked the paste (no DOM change), fall back to insertHTML
 // (rich) or insertText (plain) via execCommand / Selection API.
@@ -107,7 +108,13 @@ function pasteIntoContentEditable(el, pastedText, originalClipboard) {
 
     const dt = new DataTransfer();
     for (const type of originalClipboard.types) {
+        // "Files" isn't real string data — getData() always returns '' for it.
+        // Actual File objects are cloned separately below via items.add().
+        if (type === 'Files') continue;
         dt.setData(type, originalClipboard.getData(type));
+    }
+    for (const file of originalClipboard.files) {
+        dt.items.add(file);
     }
 
     const syntheticEvent = new ClipboardEvent('paste', {
