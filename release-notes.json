@@ -1,6 +1,6 @@
 {
-  "version": "2.5.5",
+  "version": "2.5.6",
   "notes": [
-    "Migrate analytics events to the generic GA proxy with separate install and update lifecycle events"
+    "Image paste in rich editors (e.g. ChatGPT): clipboard files are now included when re-dispatching paste to the page"
   ]
 }
