@@ -123,15 +123,23 @@ function pasteIntoContentEditable(el, pastedText, originalClipboard) {
         cancelable: true,
     });
 
-    // Track actual DOM mutations rather than diffing innerHTML before/after.
-    // If the pasted text is identical to the replaced selection (e.g. copying
-    // "abc", selecting "abc", pasting "abc"), the site's editor still deletes
-    // the selection and inserts new nodes, but the resulting innerHTML string
-    // ends up unchanged — an innerHTML comparison would wrongly conclude the
-    // site ignored the paste and fall through to inserting the text a second
-    // time, producing a duplicate ("abcabc").
+    // Detect whether the site's editor actually inserted content by observing
+    // content mutations rather than diffing innerHTML before/after. If the
+    // pasted text is identical to the replaced selection (e.g. copying "abc",
+    // selecting "abc", pasting "abc"), the editor still deletes the selection
+    // and inserts new nodes, but the resulting innerHTML string ends up
+    // unchanged — an innerHTML comparison would wrongly conclude the site
+    // ignored the paste and fall through to inserting the text a second time,
+    // producing a duplicate ("abcabc").
+    //
+    // Only childList / characterData count as "handled". We deliberately do NOT
+    // observe attributes: sites that block paste often call preventDefault()
+    // and then mutate cosmetic state (e.g. classList.add('blocked') or a
+    // validation attribute) without inserting anything. Treating those as
+    // "handled" would skip our fallback and paste nothing at all — defeating
+    // the extension on exactly the paste-blocking sites it exists to help.
     const observer = new MutationObserver(() => {});
-    observer.observe(el, { childList: true, subtree: true, characterData: true, attributes: true });
+    observer.observe(el, { childList: true, subtree: true, characterData: true });
 
     _syntheticPaste = true;
     el.dispatchEvent(syntheticEvent);
