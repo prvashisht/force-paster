@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Effective date: June 2, 2026
+Effective date: July 25, 2026
 
 ## TL;DR
 
@@ -53,8 +53,8 @@ click, and rating prompt response.
 
 Event data may include the extension version, browser or platform metadata,
 locale, time zone, generated client/session identifiers, enabled state, event
-source, menu item, rating choice, paste count, paste count bucket, the focused
-element type, and the website domain where a paste completed.
+source, menu item, rating choice, paste count bucket, the focused element type,
+and the website domain where a paste completed.
 
 **Pasted text, rich clipboard contents, page contents, and full URLs are not
 sent in analytics events.** Analytics data is used to maintain and improve the
