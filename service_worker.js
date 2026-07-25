@@ -34,8 +34,9 @@ function getPasteCountBucket(pasteCount) {
 }
 
 function withPasteCountAnalytics(pasteCount) {
+    // Only emit the low-cardinality bucket. The exact count exploded GA event
+    // cardinality, so it was retired.
     return {
-        paste_count: pasteCount,
         paste_count_bucket: getPasteCountBucket(pasteCount),
     };
 }
@@ -277,7 +278,7 @@ webext.runtime.onInstalled.addListener(async installInfo => {
     if (installDate) debugData.installDate = installDate;
     if (updateDate) debugData.updateDate = updateDate;
 
-    // Read existing settings first so paste_count is available for the event.
+    // Read existing settings first so the paste bucket is available for the event.
     const { forcepaster: existingSettings } = await webext.storage.local.get('forcepaster');
     const existingPasteCount = existingSettings?.pasteCount ?? 0;
     const lifecycleEventName = installInfo.reason === "install"
