@@ -1,6 +1,6 @@
 {
-  "version": "2.5.6",
+  "version": "2.5.7",
   "notes": [
-    "Image paste in rich editors (e.g. ChatGPT): clipboard files are now included when re-dispatching paste to the page"
+    "Internal: analytics now report a paste-count range instead of the exact number"
   ]
 }
