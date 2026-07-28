@@ -8,7 +8,7 @@ We appreciate your interest in contributing to the Force Paster project! By part
 2. **Create a Branch:** Create a new branch for your feature or bug fix using a descriptive name.
 3. **Make Changes:** Make your changes, ensuring they are clear, concise, and properly documented.
 4. **Test your changes:** Test the extension again along with your changes in different browser configurations. [Here's one example](https://indusnet.indusind.com/) of a website that blocks pasting.
-5. **Open a Pull Request:** Submit a pull request to the `master` branch with a clear title and description of your changes.
+5. **Open a Pull Request:** Submit a pull request to the `main` branch with a clear title and description of your changes.
 6. **Discuss:** Engage in discussion about your changes with maintainers and other community members.
 7. **Iterate:** Address any feedback received and make necessary changes. Your pull request may require several rounds of review and refinement.
 
