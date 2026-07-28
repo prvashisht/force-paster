@@ -1,6 +1,6 @@
 # Force Paster
 
-[![Version](https://img.shields.io/github/manifest-json/v/prvashisht/force-paster)](https://github.com/prvashisht/force-paster/blob/master/manifest.json)
+[![Version](https://img.shields.io/github/manifest-json/v/prvashisht/force-paster/main)](https://github.com/prvashisht/force-paster/blob/main/manifest.json)
 
 Force Paster is a browser extension that lets you paste text into any input field or text area — even on sites that have deliberately blocked pasting. One click enables it; one click turns it back off.
 
