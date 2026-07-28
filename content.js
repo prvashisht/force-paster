@@ -145,7 +145,7 @@ function pasteIntoContentEditable(el, pastedText, originalClipboard) {
     const observer = new MutationObserver(() => {});
     observer.observe(el, { childList: true, subtree: true, characterData: true });
 
-    const beforeSelection = snapshotSelection();
+    const beforeSelection = snapshotSelection(el);
 
     _syntheticPaste = true;
     el.dispatchEvent(syntheticEvent);
@@ -153,7 +153,7 @@ function pasteIntoContentEditable(el, pastedText, originalClipboard) {
 
     const contentMutated  = observer.takeRecords().length > 0;
     observer.disconnect();
-    const selectionMoved  = selectionChangedSince(beforeSelection);
+    const selectionMoved  = selectionChangedSince(beforeSelection, el);
 
     if (contentMutated || selectionMoved) return;
 
@@ -171,26 +171,51 @@ function pasteIntoContentEditable(el, pastedText, originalClipboard) {
 
 // Snapshot the current selection's boundary points so we can tell afterwards
 // whether an editor moved the caret (e.g. collapsed a range after inserting).
-function snapshotSelection() {
+//
+// Boundaries are stored as character offsets *relative to `el`* rather than
+// raw (node, offset) pairs. Many editors (Gemini's rich-textarea among them)
+// normalize/replace text nodes on every focus or paste event — including
+// ones they end up blocking — as pure internal housekeeping, with no content
+// actually inserted. Comparing anchorNode/focusNode by reference treats that
+// node churn as "the caret moved" and wrongly skips our fallback, silently
+// breaking paste entirely. Character offsets are stable across node
+// replacement as long as nothing was actually typed/inserted, so they only
+// change when the editor genuinely consumed the paste.
+function snapshotSelection(el) {
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return null;
+    const anchorOffset = textOffsetWithin(el, sel.anchorNode, sel.anchorOffset);
+    const focusOffset  = textOffsetWithin(el, sel.focusNode, sel.focusOffset);
+    if (anchorOffset === null || focusOffset === null) return null;
     return {
-        anchorNode:   sel.anchorNode,
-        anchorOffset: sel.anchorOffset,
-        focusNode:    sel.focusNode,
-        focusOffset:  sel.focusOffset,
-        isCollapsed:  sel.isCollapsed,
+        anchorOffset,
+        focusOffset,
+        isCollapsed: sel.isCollapsed,
+        textLength:  el.textContent.length,
     };
 }
 
-function selectionChangedSince(before) {
-    const after = snapshotSelection();
+// Converts a (node, offset) boundary into a character offset counted from the
+// start of `el`'s text content, or null if the boundary isn't inside `el`.
+function textOffsetWithin(el, node, offset) {
+    if (!node || !el.contains(node)) return null;
+    const range = document.createRange();
+    try {
+        range.selectNodeContents(el);
+        range.setEnd(node, offset);
+    } catch {
+        return null;
+    }
+    return range.toString().length;
+}
+
+function selectionChangedSince(before, el) {
+    const after = snapshotSelection(el);
     if (!before || !after) return false;
-    return before.anchorNode   !== after.anchorNode   ||
-           before.anchorOffset !== after.anchorOffset ||
-           before.focusNode    !== after.focusNode    ||
+    return before.anchorOffset !== after.anchorOffset ||
            before.focusOffset  !== after.focusOffset  ||
-           before.isCollapsed  !== after.isCollapsed;
+           before.isCollapsed  !== after.isCollapsed  ||
+           before.textLength   !== after.textLength;
 }
 
 function insertTextViaSelectionAPI(container, text) {
