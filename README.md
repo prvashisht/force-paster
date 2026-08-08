@@ -16,11 +16,7 @@ Force Paster is a browser extension that lets you paste text into any input fiel
 - **Right-click context menu** — on desktop: toggle, open the dashboard, manage shortcuts, rate the extension, or report a bug from the toolbar icon
 - **Dashboard** — a tabbed settings page (Settings / What's new / More); open it via the context menu or the browser’s extension options
 - **Dark & light icons** — the toolbar icon automatically follows your system theme
-- **Cross-browser** — Chrome, Brave, Edge, Firefox desktop (121+), and Firefox for Android
-
-### Firefox for Android
-
-Install from [Firefox Add-ons](https://vashis.ht/rd/forcepaster?from=github-readme) (same listing as desktop). Toggle from the extensions menu or the options dashboard. Keyboard shortcuts and toolbar context menus are not available on Android; the options page hides those desktop-only controls automatically.
+- **Cross-browser** — Chrome, Brave, Edge, Firefox desktop (121+), and Firefox for Android (toggle via extensions menu or options; no keyboard shortcuts / context menus on Android)
 
 ---
 
