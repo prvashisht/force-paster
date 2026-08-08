@@ -38,6 +38,8 @@ Force Paster is a browser extension that lets you paste text into any input fiel
 2. **Chrome / Brave / Edge** — navigate to `chrome://extensions/`, enable **Developer mode**, click **Load unpacked**, and select the cloned folder.
 3. **Firefox** — navigate to `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, and select `manifest.json` inside the cloned folder.
 
+> **Note (Chrome):** loading the folder unpacked shows a harmless warning — `'background.scripts' requires manifest version of 2 or lower.` This is expected. `manifest.json` is shared across browsers (Firefox uses `background.scripts`, Chrome uses `background.service_worker`), and `build.sh` strips the key that doesn't apply to each target when packaging. The extension still loads and works normally.
+
 ---
 
 ## How it works
@@ -120,6 +122,10 @@ Events are sent anonymously via the generic Cloud Functions GA proxy, identified
 2. In Chrome, go to `chrome://extensions/` and click the **reload** icon on the Force Paster card to pick up changes.
 3. In Firefox, go to `about:debugging#/runtime/this-firefox` and click **Reload** next to Force Paster.
 4. Test on a site that blocks pasting (e.g. many banking or exam portals).
+
+### Building the packaged zips
+
+You don't need this to develop, but to produce the distributable zips locally, run `./build.sh`. It writes `dist/force-paster-chrome-v*.zip` and `dist/force-paster-firefox-v*.zip`, and requires Node.js and `zip`. The build fails if the `manifest.json` and `release-notes.json` versions don't match.
 
 ### Keyboard shortcut remap
 
