@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Force Paster — paste blocked test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 32rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.4; }
+    label { display: block; font-weight: 600; margin-top: 1.25rem; }
+    input, textarea { width: 100%; box-sizing: border-box; margin-top: 0.35rem; padding: 0.6rem; font-size: 1rem; }
+    .hint { color: #555; font-size: 0.9rem; margin-top: 0.35rem; }
+    .status { margin-top: 1.5rem; padding: 0.75rem 1rem; background: #f3f3f3; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Paste-blocked test page</h1>
+  <p>This page blocks paste on both fields (same pattern many banking / exam sites use). With Force Paster <strong>OFF</strong>, paste should fail. With it <strong>ON</strong>, paste should work.</p>
+
+  <label for="blocked-input">Blocked input</label>
+  <input id="blocked-input" type="text" placeholder="Try pasting here" autocomplete="off">
+  <p class="hint">Copy some text, tap this field, paste.</p>
+
+  <label for="blocked-textarea">Blocked textarea</label>
+  <textarea id="blocked-textarea" rows="4" placeholder="Try pasting here"></textarea>
+
+  <div class="status" id="status">Last paste attempt: none yet</div>
+
+  <script>
+    function blockPaste(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      document.getElementById('status').textContent =
+        'Last paste attempt: blocked by page at ' + new Date().toLocaleTimeString();
+    }
+
+    // Bubble-phase listeners — Force Paster uses capture and should win when ON.
+    document.getElementById('blocked-input').addEventListener('paste', blockPaste);
+    document.getElementById('blocked-textarea').addEventListener('paste', blockPaste);
+
+    // Also block common keyboard paste shortcuts at the document level.
+    document.addEventListener('keydown', (event) => {
+      const key = event.key?.toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && key === 'v') {
+        event.preventDefault();
+      }
+    });
+  </script>
+</body>
+</html>
