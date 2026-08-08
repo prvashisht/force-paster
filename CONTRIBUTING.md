@@ -7,10 +7,11 @@ We appreciate your interest in contributing to the Force Paster project! By part
 1. **Fork the Repository:** Click the 'Fork' button on the top right corner of the repository page to create your own fork.
 2. **Create a Branch:** Create a new branch for your feature or bug fix using a descriptive name.
 3. **Make Changes:** Make your changes, ensuring they are clear, concise, and properly documented.
-4. **Test your changes:** Test the extension again along with your changes in different browser configurations. [Here's one example](https://indusnet.indusind.com/) of a website that blocks pasting.
-5. **Open a Pull Request:** Submit a pull request to the `main` branch with a clear title and description of your changes.
-6. **Discuss:** Engage in discussion about your changes with maintainers and other community members.
-7. **Iterate:** Address any feedback received and make necessary changes. Your pull request may require several rounds of review and refinement.
+4. **Test your changes:** Exercise the extension in the browsers you care about (at least one Chromium browser and Firefox when possible). Useful checks: toolbar/options toggle, paste on a blocking site, and (for rich editors) a contenteditable field. A local paste-blocked demo lives in [`test-fixtures/paste-blocked.html`](test-fixtures/paste-blocked.html) — serve it over HTTP so content scripts inject. Another public example of blocked paste: [IndusInd Net](https://indusnet.indusind.com/).
+5. **Optional Firefox package check:** run `./scripts/lint-firefox.sh` if you changed the Firefox manifest or packaging.
+6. **Open a Pull Request:** Submit a pull request to the `main` branch with a clear title and description of your changes.
+7. **Discuss:** Engage in discussion about your changes with maintainers and other community members.
+8. **Iterate:** Address any feedback received and make necessary changes. Your pull request may require several rounds of review and refinement.
 
 ### Reporting Bugs
 

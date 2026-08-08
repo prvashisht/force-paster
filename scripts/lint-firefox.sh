@@ -2,13 +2,13 @@
 # Build the Firefox zip and lint it with the same engine AMO uses (addons-linter
 # via web-ext). Run before tagging a release that enables Firefox for Android.
 #
-# Usage: ./lint-firefox.sh
+# Usage: ./scripts/lint-firefox.sh
 #
 # Exit code is non-zero if the linter reports errors.
 
 set -euo pipefail
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 chmod +x build.sh
 ./build.sh
