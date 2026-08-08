@@ -52,6 +52,19 @@ function shouldShowRatingPrompt(settings) {
 import { sendProxyEvent, TOKEN_STORAGE_KEY, CLIENT_ID_STORAGE_KEY } from "./analytics.js";
 import { webext } from "./webext.js";
 
+// Firefox for Android does not implement contextMenus/menus. Touching the API at
+// top level (e.g. onClicked.addListener) prevents the background script from
+// loading at all — toggles and messaging then silently fail.
+const contextMenus = webext.contextMenus;
+const hasContextMenus = !!(contextMenus
+    && typeof contextMenus.create === "function"
+    && typeof contextMenus.onClicked?.addListener === "function");
+
+function updateContextMenuToggle(checked) {
+    if (!hasContextMenus) return;
+    contextMenus.update("toggle", { checked }).catch(() => {});
+}
+
 let forcePasterSettings = {
     isPasteEnabled: false,
     clickCount: 0,
@@ -65,7 +78,7 @@ let forcePasterSettings = {
 const settingsReady = webext.storage.local.get(['forcepaster']).then(item => {
     if (item.forcepaster) {
         forcePasterSettings = item.forcepaster;
-        webext.contextMenus.update("toggle", { checked: forcePasterSettings.isPasteEnabled }).catch(() => {});
+        updateContextMenuToggle(forcePasterSettings.isPasteEnabled);
     }
 });
 
@@ -78,9 +91,13 @@ let saveAndApplyExtensionDetails = newData => {
     setExtensionUninstallURL(forcePasterSettings).catch(e => {
         console.warn("setExtensionUninstallURL failed", e);
     });
-    webext.action.setBadgeText({ text: forcePasterSettings.isPasteEnabled ? BADGE_TEXT_ENABLED : BADGE_TEXT_DISABLED });
-    webext.action.setBadgeBackgroundColor({ color: forcePasterSettings.isPasteEnabled ? BADGE_BG_ENABLED : BADGE_BG_DISABLED });
-    webext.contextMenus.update("toggle", { checked: forcePasterSettings.isPasteEnabled }).catch(() => {});
+    try {
+        webext.action.setBadgeText({ text: forcePasterSettings.isPasteEnabled ? BADGE_TEXT_ENABLED : BADGE_TEXT_DISABLED });
+        webext.action.setBadgeBackgroundColor({ color: forcePasterSettings.isPasteEnabled ? BADGE_BG_ENABLED : BADGE_BG_DISABLED });
+    } catch (e) {
+        console.warn("badge update failed", e);
+    }
+    updateContextMenuToggle(forcePasterSettings.isPasteEnabled);
 }
 
 let setExtensionUninstallURL = async debugData => {
@@ -110,12 +127,13 @@ let setExtensionUninstallURL = async debugData => {
 };
 
 function buildContextMenus() {
-    webext.contextMenus.removeAll(() => {
-        webext.contextMenus.create({ id: "toggle", type: "checkbox", title: "Enable Force Paste", contexts: ["action"], checked: forcePasterSettings.isPasteEnabled });
-        webext.contextMenus.create({ id: "shortcuts", title: "Manage keyboard shortcuts", contexts: ["action"] });
-        webext.contextMenus.create({ id: "options", title: "Open dashboard", contexts: ["action"] });
-        webext.contextMenus.create({ id: "rate", title: "⭐  Rate Force Paster", contexts: ["action"] });
-        webext.contextMenus.create({ id: "bug", title: "🐛  Report a bug", contexts: ["action"] });
+    if (!hasContextMenus) return;
+    contextMenus.removeAll(() => {
+        contextMenus.create({ id: "toggle", type: "checkbox", title: "Enable Force Paste", contexts: ["action"], checked: forcePasterSettings.isPasteEnabled });
+        contextMenus.create({ id: "shortcuts", title: "Manage keyboard shortcuts", contexts: ["action"] });
+        contextMenus.create({ id: "options", title: "Open dashboard", contexts: ["action"] });
+        contextMenus.create({ id: "rate", title: "⭐  Rate Force Paster", contexts: ["action"] });
+        contextMenus.create({ id: "bug", title: "🐛  Report a bug", contexts: ["action"] });
     });
 }
 
@@ -137,44 +155,45 @@ webext.action.onClicked.addListener(async () => {
     }
 });
 
-webext.contextMenus.onClicked.addListener(async (info) => {
-    await settingsReady;
-    switch (info.menuItemId) {
-        case "toggle": {
-            saveAndApplyExtensionDetails({
-                isPasteEnabled: info.checked,
-                clickCount: forcePasterSettings.clickCount + 1,
-            });
-            try {
-                await sendProxyEvent("fp_toggle", {
-                    enabled: info.checked,
-                    source: "context_menu",
-                    ...withPasteCountAnalytics(forcePasterSettings.pasteCount),
+if (hasContextMenus) {
+    contextMenus.onClicked.addListener(async (info) => {
+        await settingsReady;
+        switch (info.menuItemId) {
+            case "toggle": {
+                saveAndApplyExtensionDetails({
+                    isPasteEnabled: info.checked,
+                    clickCount: forcePasterSettings.clickCount + 1,
                 });
-            } catch (e) {
-                console.warn("analytics fp_toggle failed", e);
+                try {
+                    await sendProxyEvent("fp_toggle", {
+                        enabled: info.checked,
+                        source: "context_menu",
+                        ...withPasteCountAnalytics(forcePasterSettings.pasteCount),
+                    });
+                } catch (e) {
+                    console.warn("analytics fp_toggle failed", e);
+                }
+                break;
             }
-            break;
+            case "shortcuts":
+                await webext.openShortcutsPage();
+                sendProxyEvent("fp_menu_click", { item: "shortcuts" }).catch(() => {});
+                break;
+            case "options":
+                webext.runtime.openOptionsPage();
+                sendProxyEvent("fp_menu_click", { item: "options" }).catch(() => {});
+                break;
+            case "rate":
+                webext.tabs.create({ url: "https://vashis.ht/rd/forcepaster?from=forcepaster-extension-context_menu" });
+                sendProxyEvent("fp_menu_click", { item: "rate" }).catch(() => {});
+                break;
+            case "bug":
+                webext.tabs.create({ url: "https://github.com/prvashisht/force-paster/issues/new" });
+                sendProxyEvent("fp_menu_click", { item: "bug" }).catch(() => {});
+                break;
         }
-        case "shortcuts":
-            await webext.openShortcutsPage();
-            sendProxyEvent("fp_menu_click", { item: "shortcuts" }).catch(() => {});
-            break;
-        case "options":
-            webext.runtime.openOptionsPage();
-            sendProxyEvent("fp_menu_click", { item: "options" }).catch(() => {});
-            break;
-        case "rate":
-            webext.tabs.create({ url: "https://vashis.ht/rd/forcepaster?from=forcepaster-extension-context_menu" });
-            sendProxyEvent("fp_menu_click", { item: "rate" }).catch(() => {});
-            break;
-        case "bug":
-            webext.tabs.create({ url: "https://github.com/prvashisht/force-paster/issues/new" });
-            sendProxyEvent("fp_menu_click", { item: "bug" }).catch(() => {});
-            break;
-    }
-});
-
+    });
+}
 webext.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     await settingsReady;
     const { type, on } = request;
@@ -244,6 +263,7 @@ webext.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             isPasteEnabled: request.enabled,
             clickCount: forcePasterSettings.clickCount + 1,
         });
+        sendResponse({ ok: true });
         try {
             await sendProxyEvent("fp_toggle", {
                 enabled: request.enabled,
@@ -253,7 +273,6 @@ webext.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         } catch (e) {
             console.warn("analytics fp_toggle failed", e);
         }
-        sendResponse({ ok: true });
     }
     return true;
 });
@@ -315,7 +334,11 @@ webext.runtime.onInstalled.addListener(async installInfo => {
         // Only refresh the platform/version debug fields.
         saveAndApplyExtensionDetails({ ...(existingSettings || {}), ...debugData });
     }
-    webext.action.setBadgeTextColor({ color: BADGE_TEXT_COLOR });
+    try {
+        webext.action.setBadgeTextColor({ color: BADGE_TEXT_COLOR });
+    } catch (e) {
+        console.warn("setBadgeTextColor failed", e);
+    }
     buildContextMenus();
 
     // Open the dashboard once ever — on first install only.

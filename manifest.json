@@ -62,6 +62,9 @@
     "gecko": {
       "id": "{8159730a-851d-4416-bd8b-5d6117192c1f}",
       "strict_min_version": "121.0"
+    },
+    "gecko_android": {
+      "strict_min_version": "121.0"
     }
   }
 }

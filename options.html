@@ -510,6 +510,33 @@
             border-radius: 4px;
         }
 
+        /* ── Android platform note (shown only on Firefox for Android) ── */
+        .android-note {
+            display: none;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+        }
+
+        .android-note.visible {
+            display: block;
+        }
+
+        .android-note-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .android-note-body {
+            font-size: 12px;
+            color: var(--text-sub);
+            line-height: 1.5;
+        }
+
         /* ── Close button ── */
         .close-btn {
             position: fixed;
@@ -559,7 +586,16 @@
         <!-- ── Tab: Settings ── -->
         <div class="tab-panel active" id="tab-settings" role="tabpanel">
 
-            <!-- Pin helper (shown only when not on toolbar) -->
+            <!-- Android-only: desktop features that don't exist on Firefox for Android -->
+            <div class="android-note" id="android-note" hidden>
+                <div class="android-note-title">Firefox for Android</div>
+                <div class="android-note-body">
+                    Toggle Force Paste from the extensions menu (or the switch below).
+                    Keyboard shortcuts and right‑click extension menus aren’t available on Android.
+                </div>
+            </div>
+
+            <!-- Pin helper (shown only when not on toolbar; desktop only) -->
             <div class="pin-card" id="pin-card">
                 <div class="pin-card-title">📌 Pin Force Paster to your toolbar</div>
                 <div class="pin-card-desc" id="pin-card-desc"></div>
@@ -570,7 +606,7 @@
                 <div class="card-row">
                     <div>
                         <div class="card-title">Force Paste</div>
-                        <div class="card-desc">Enable paste on sites that block it</div>
+                        <div class="card-desc" id="toggle-desc">Enable paste on sites that block it</div>
                     </div>
                     <label class="switch" aria-label="Toggle Force Paste">
                         <input type="checkbox" id="toggle">
@@ -591,8 +627,8 @@
                 </div>
             </div>
 
-            <!-- Keyboard shortcut -->
-            <div class="card">
+            <!-- Keyboard shortcut (hidden on Android — commands API unsupported) -->
+            <div class="card" id="shortcut-card">
                 <div class="shortcut-content">
                     <div class="card-title">Keyboard Shortcut</div>
                     <div class="shortcut-row">

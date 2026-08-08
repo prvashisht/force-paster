@@ -40,15 +40,42 @@ webext.storage.onChanged.addListener((changes) => {
 // ── Toggle ────────────────────────────────────────────────────────────────────
 
 document.getElementById('toggle').addEventListener('change', async (e) => {
+    const enabled = e.target.checked;
     try {
-        await webext.runtime.sendMessage({ type: 'setenabled', enabled: e.target.checked });
+        await webext.runtime.sendMessage({ type: 'setenabled', enabled });
     } catch (err) {
-        // Service worker may be sleeping; write directly and it will pick it up
+        // Background may be unavailable (e.g. Android cold start). Persist locally;
+        // content scripts pick this up via storage.onChanged.
         const { forcepaster } = await webext.storage.local.get('forcepaster');
-        const updated = { ...(forcepaster || {}), isPasteEnabled: e.target.checked };
+        const updated = {
+            ...(forcepaster || {}),
+            isPasteEnabled: enabled,
+            clickCount: (forcepaster?.clickCount ?? 0) + 1,
+        };
         await webext.storage.local.set({ forcepaster: updated });
     }
 });
+
+// ── Platform (Firefox for Android hides desktop-only chrome) ─────────────────
+
+async function getIsAndroid() {
+    try {
+        const info = await webext.runtime.getPlatformInfo();
+        return info.os === 'android';
+    } catch {
+        return false;
+    }
+}
+
+function applyAndroidOptionsUI() {
+    const note = document.getElementById('android-note');
+    note.hidden = false;
+    note.classList.add('visible');
+
+    document.getElementById('shortcut-card').hidden = true;
+    document.getElementById('toggle-desc').textContent =
+        'Enable paste on sites that block it. You can also toggle from the extensions menu.';
+}
 
 // ── Keyboard shortcut ────────────────────────────────────────────────────────
 
@@ -102,14 +129,16 @@ async function checkPinStatus() {
     }
 }
 
-// Auto-dismiss if user pins the extension while the page is open
-if (webext.action.onUserSettingsChanged) {
-    webext.action.onUserSettingsChanged.addListener((settings) => {
-        setPinCardVisible(settings.isOnToolbar);
-    });
+function initDesktopChrome() {
+    // Auto-dismiss if user pins the extension while the page is open
+    if (webext.action.onUserSettingsChanged) {
+        webext.action.onUserSettingsChanged.addListener((settings) => {
+            setPinCardVisible(settings.isOnToolbar);
+        });
+    }
+    checkPinStatus();
+    loadShortcut();
 }
-
-checkPinStatus();
 
 function track(type, extra = {}) {
     webext.runtime.sendMessage({ type, ...extra }).catch(() => {});
@@ -232,5 +261,12 @@ async function loadReleaseNotes() {
 }
 
 loadSettings();
-loadShortcut();
 loadReleaseNotes();
+
+getIsAndroid().then((isAndroid) => {
+    if (isAndroid) {
+        applyAndroidOptionsUI();
+        return;
+    }
+    initDesktopChrome();
+});
