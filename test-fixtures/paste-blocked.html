@@ -33,7 +33,7 @@
         'Last paste attempt: blocked by page at ' + new Date().toLocaleTimeString();
     }
 
-    // Bubble-phase listeners — Force Paster uses capture and should win when ON.
+    // Bubble-phase listeners — with Force Paster ON, paste should still land.
     document.getElementById('blocked-input').addEventListener('paste', blockPaste);
     document.getElementById('blocked-textarea').addEventListener('paste', blockPaste);
 

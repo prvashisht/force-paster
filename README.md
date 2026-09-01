@@ -59,11 +59,12 @@ service_worker.js  ←─ action.onClicked / _execute_action / contextMenus (des
         │
         ▼  storage.onChanged
 content.js  (injected into every page / frame)
-  • document-level capture-phase `paste` listener (runs before site handlers)
-  • when isPasteEnabled: stops the site from blocking paste, then:
+  • document-level capture-phase `paste` listener
+  • when isPasteEnabled: lets the site/browser handle paste; if they cancelled
+    it and the text never shows up, inserts it:
       – input/textarea: native value setter + input/change events
-      – contenteditable: synthetic ClipboardEvent (MIME types + files), with fallbacks
-  • reports paste completion back to the background via runtime messages
+      – contenteditable: insertHTML / insertText
+  • reports a forced paste back to the background via runtime messages
   • watches prefers-color-scheme and notifies the background for icon variants
         │
         ▼  (options page)
