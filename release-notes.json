@@ -1,6 +1,6 @@
 {
-  "version": "2.5.8",
+  "version": "2.5.9",
   "notes": [
-    "Fix paste failing on Gemini after the contenteditable duplicate-paste detection change"
+    "Fix paste showing up twice in ChatGPT conversations"
   ]
 }

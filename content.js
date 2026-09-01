@@ -28,14 +28,15 @@ darkModeListener(darkModePreference);
 const isInputOrTextarea = (el) => ["input", "textarea"].includes(el.tagName.toLowerCase());
 const isContentEditable = (el) => !!(el && el.isContentEditable);
 
-let _syntheticPaste = false;
+// Give-up on a blocked field. Editors that handle paste usually write sooner;
+// waiting much longer than this feels laggy on bank/exam pages.
+const FORCE_PASTE_WAIT_MS = 51;
 
-// Capture phase at document level — runs before every page-registered listener
-// (both capture and bubble), so sites cannot block us with stopPropagation or
-// stopImmediatePropagation on their own handlers.
+// Capture so we see the paste. We do not cancel it — ChatGPT / Notion / the
+// browser get the real event. If they put the text in the field, we do nothing.
+// We only insert when the page cancelled paste and the text never appeared.
 document.addEventListener('paste', event => {
     if (!forcePasterSettings.isPasteEnabled) return;
-    if (_syntheticPaste) return;
 
     const currEle = document.activeElement;
     const isField    = isInputOrTextarea(currEle);
@@ -43,28 +44,100 @@ document.addEventListener('paste', event => {
 
     if (!isField && !isEditable) return;
 
-    // Seize the event — stop all other listeners (including the site's) from
-    // seeing it, then cancel the browser's default paste behaviour.
-    event.stopImmediatePropagation();
-    event.preventDefault();
-
     const clipboardData = event.clipboardData || window.clipboardData || event.originalEvent?.clipboardData;
+    if (!clipboardData) return;
+
     const pastedText = clipboardData.getData('Text');
+    const pastedHtml = clipboardData.getData('text/html');
+    const snapshot   = snapshotPasteTarget(currEle, isField);
 
-    chrome.runtime.sendMessage({ type: "onpastestart", on: currEle.tagName.toLowerCase() });
+    let settled = false;
+    const finish = (shouldForce) => {
+        if (settled) return;
+        settled = true;
+        observer.disconnect();
+        clearTimeout(giveUp);
 
-    if (isField) {
-        pasteIntoInputField(currEle, pastedText);
-    } else {
-        pasteIntoContentEditable(currEle, pastedText, clipboardData);
-    }
+        if (!shouldForce) return;
+        if (!forcePasterSettings.isPasteEnabled) return;
+        if (!currEle.isConnected) return;
+        if (document.activeElement !== currEle && !currEle.contains(document.activeElement)) return;
+        if (pasteAlreadyLanded(currEle, isField, pastedText, snapshot)) return;
 
-    chrome.runtime.sendMessage({ type: "onpastecomplete" }, response => {
-        if (response?.showRatingPrompt) {
-            showRatingToast();
+        chrome.runtime.sendMessage({ type: "onpastestart", on: currEle.tagName.toLowerCase() });
+
+        if (isField) {
+            pasteIntoInputField(currEle, pastedText);
+        } else {
+            pasteIntoContentEditable(currEle, pastedText, pastedHtml);
         }
+
+        chrome.runtime.sendMessage({ type: "onpastecomplete" }, response => {
+            if (response?.showRatingPrompt) {
+                showRatingToast();
+            }
+        });
+    };
+
+    const observer = new MutationObserver(() => {
+        if (pasteAlreadyLanded(currEle, isField, pastedText, snapshot)) finish(false);
     });
+    observer.observe(currEle, { childList: true, subtree: true, characterData: true });
+
+    queueMicrotask(() => {
+        if (pasteAlreadyLanded(currEle, isField, pastedText, snapshot)) finish(false);
+    });
+
+    // Editors like ChatGPT often write after the paste event. Watch for the
+    // text. If the page cancelled paste and nothing showed up, then we insert.
+    const giveUp = setTimeout(() => {
+        if (pasteAlreadyLanded(currEle, isField, pastedText, snapshot)) {
+            finish(false);
+            return;
+        }
+        finish(event.defaultPrevented);
+    }, FORCE_PASTE_WAIT_MS);
 }, true /* capture */);
+
+function snapshotPasteTarget(el, isField) {
+    if (isField) {
+        const start = el.selectionStart;
+        const end   = el.selectionEnd;
+        return {
+            text:  el.value ?? '',
+            start: typeof start === 'number' ? start : 0,
+            end:   typeof end === 'number' ? end : 0,
+        };
+    }
+    const text = el.textContent ?? '';
+    const sel  = snapshotSelection(el);
+    if (!sel) return { text, start: text.length, end: text.length };
+    return {
+        text,
+        start: Math.min(sel.anchorOffset, sel.focusOffset),
+        end:   Math.max(sel.anchorOffset, sel.focusOffset),
+    };
+}
+
+// True if the clipboard text already made it into the field — native paste,
+// the site's editor, or a same-text replace (copy "abc", paste over "abc").
+function pasteAlreadyLanded(el, isField, pastedText, snap) {
+    // Image/file paste has no text. Leave it to the real event; don't shove "".
+    if (!pastedText) return true;
+
+    const after    = isField ? (el.value ?? '') : (el.textContent ?? '');
+    const expected = snap.text.slice(0, snap.start) + pastedText + snap.text.slice(snap.end);
+    if (after === expected) return true;
+
+    const fold = (s) => s.replace(/\r\n/g, '\n').replace(/\n+$/g, '');
+    if (fold(after) === fold(expected)) return true;
+
+    const replaced = snap.end - snap.start;
+    const grew     = after.length - snap.text.length;
+    if (after.includes(pastedText) && grew >= Math.max(0, pastedText.length - replaced)) return true;
+
+    return false;
+}
 
 // ---------------------------------------------------------------------------
 // Input / textarea
@@ -95,69 +168,13 @@ function pasteIntoInputField(el, pastedText) {
 // ---------------------------------------------------------------------------
 // contenteditable  (Gmail, Notion, Slack-style editors)
 //
-// Strategy: re-dispatch a synthetic ClipboardEvent carrying the original
-// clipboard payload (all MIME types, plus any files) so the site's own
-// editor can handle the paste natively — preserving rich formatting in
-// apps like Notion and image attachments in apps like ChatGPT.
-//
-// If the site blocked the paste (no content mutation and no caret movement),
-// fall back to insertHTML (rich) or insertText (plain) via execCommand /
-// Selection API.
+// Only used when the site blocked paste and the text never showed up. Insert
+// HTML if we have it, otherwise plain text. We do not re-fire a fake paste —
+// that races editors that apply the real event a frame later (ChatGPT).
 // ---------------------------------------------------------------------------
-function pasteIntoContentEditable(el, pastedText, originalClipboard) {
+function pasteIntoContentEditable(el, pastedText, pastedHtml) {
     el.focus();
 
-    const dt = new DataTransfer();
-    for (const type of originalClipboard.types) {
-        // "Files" isn't real string data — getData() always returns '' for it.
-        // Actual File objects are cloned separately below via items.add().
-        if (type === 'Files') continue;
-        dt.setData(type, originalClipboard.getData(type));
-    }
-    for (const file of originalClipboard.files) {
-        dt.items.add(file);
-    }
-
-    const syntheticEvent = new ClipboardEvent('paste', {
-        clipboardData: dt,
-        bubbles: true,
-        cancelable: true,
-    });
-
-    // Decide whether the site's editor handled the re-dispatched paste itself.
-    // We combine two signals, because neither is sufficient alone:
-    //
-    // 1. A content mutation (childList / characterData). We deliberately do NOT
-    //    observe attributes: sites that block paste often call preventDefault()
-    //    and then mutate cosmetic state (e.g. classList.add('blocked')) without
-    //    inserting anything — treating that as "handled" would skip our
-    //    fallback and paste nothing on the very sites the extension targets.
-    //
-    // 2. A selection change. React-based editors (Notion) update an internal
-    //    model and let React reconcile the DOM. When the pasted text equals the
-    //    replaced selection (copy "abc", select "abc", paste "abc"), the text
-    //    node value is unchanged, so React performs NO DOM mutation — yet the
-    //    editor still handled the paste and collapsed the caret after the text.
-    //    A pure content-mutation check (or the old innerHTML diff) misses this
-    //    and runs the fallback, inserting a second "abc" -> "abcabc". The caret
-    //    move survives React's diffing and reliably distinguishes "handled"
-    //    from a blocking site, which leaves the original range selected.
-    const observer = new MutationObserver(() => {});
-    observer.observe(el, { childList: true, subtree: true, characterData: true });
-
-    const beforeSelection = snapshotSelection(el);
-
-    _syntheticPaste = true;
-    el.dispatchEvent(syntheticEvent);
-    _syntheticPaste = false;
-
-    const contentMutated  = observer.takeRecords().length > 0;
-    observer.disconnect();
-    const selectionMoved  = selectionChangedSince(beforeSelection, el);
-
-    if (contentMutated || selectionMoved) return;
-
-    const pastedHtml = originalClipboard.getData('text/html');
     if (pastedHtml) {
         const inserted = document.execCommand('insertHTML', false, pastedHtml);
         if (inserted) return;
@@ -169,34 +186,16 @@ function pasteIntoContentEditable(el, pastedText, originalClipboard) {
     }
 }
 
-// Snapshot the current selection's boundary points so we can tell afterwards
-// whether an editor moved the caret (e.g. collapsed a range after inserting).
-//
-// Boundaries are stored as character offsets *relative to `el`* rather than
-// raw (node, offset) pairs. Many editors (Gemini's rich-textarea among them)
-// normalize/replace text nodes on every focus or paste event — including
-// ones they end up blocking — as pure internal housekeeping, with no content
-// actually inserted. Comparing anchorNode/focusNode by reference treats that
-// node churn as "the caret moved" and wrongly skips our fallback, silently
-// breaking paste entirely. Character offsets are stable across node
-// replacement as long as nothing was actually typed/inserted, so they only
-// change when the editor genuinely consumed the paste.
 function snapshotSelection(el) {
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return null;
     const anchorOffset = textOffsetWithin(el, sel.anchorNode, sel.anchorOffset);
     const focusOffset  = textOffsetWithin(el, sel.focusNode, sel.focusOffset);
     if (anchorOffset === null || focusOffset === null) return null;
-    return {
-        anchorOffset,
-        focusOffset,
-        isCollapsed: sel.isCollapsed,
-        textLength:  el.textContent.length,
-    };
+    return { anchorOffset, focusOffset };
 }
 
-// Converts a (node, offset) boundary into a character offset counted from the
-// start of `el`'s text content, or null if the boundary isn't inside `el`.
+// Character offset from the start of `el`, or null if the point isn't inside.
 function textOffsetWithin(el, node, offset) {
     if (!node || !el.contains(node)) return null;
     const range = document.createRange();
@@ -207,15 +206,6 @@ function textOffsetWithin(el, node, offset) {
         return null;
     }
     return range.toString().length;
-}
-
-function selectionChangedSince(before, el) {
-    const after = snapshotSelection(el);
-    if (!before || !after) return false;
-    return before.anchorOffset !== after.anchorOffset ||
-           before.focusOffset  !== after.focusOffset  ||
-           before.isCollapsed  !== after.isCollapsed  ||
-           before.textLength   !== after.textLength;
 }
 
 function insertTextViaSelectionAPI(container, text) {
