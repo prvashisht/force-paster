@@ -61,7 +61,7 @@ document.addEventListener('paste', event => {
 
     chrome.runtime.sendMessage({ type: "onpastecomplete" }, response => {
         if (response?.showRatingPrompt) {
-            showRatingToast();
+            showRatingToast(response.totalPastes);
         }
     });
 }, true /* capture */);
@@ -241,10 +241,11 @@ function fireFrameworkEvents(el) {
 
 let _ratingToastShown = false;
 
-function showRatingToast() {
+function showRatingToast(pasteCount) {
     if (_ratingToastShown || document.getElementById('fp-rating-host')) return;
     _ratingToastShown = true;
 
+    const count = Number.isFinite(pasteCount) ? pasteCount : 0;
     const host = document.createElement('div');
     host.id = 'fp-rating-host';
     const shadow = host.attachShadow({ mode: 'closed' });
@@ -256,7 +257,7 @@ function showRatingToast() {
                 bottom: 20px;
                 right: 20px;
                 z-index: 2147483647;
-                width: 288px;
+                width: 300px;
                 background: #ffffff;
                 border-radius: 14px;
                 box-shadow: 0 8px 30px rgba(0,0,0,0.14), 0 1px 4px rgba(0,0,0,0.08);
@@ -338,11 +339,11 @@ function showRatingToast() {
                 <span class="title">Enjoying Force Paster? ⭐</span>
                 <button class="close" aria-label="Dismiss">✕</button>
             </div>
-            <div class="body">A quick rating helps others find it and keeps the project going.</div>
+            <div class="body">You've used Force Paster for ${count} pastes. A quick rating helps others find it.</div>
             <div class="actions">
                 <button class="btn-rate">Rate it</button>
                 <button class="btn-later">Later</button>
-                <button class="btn-never">Never</button>
+                <button class="btn-never">Don't ask again</button>
             </div>
         </div>
     `;
