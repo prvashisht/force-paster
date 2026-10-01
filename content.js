@@ -337,7 +337,7 @@ function showRatingToast(pasteCount) {
         <div class="toast">
             <div class="header">
                 <span class="title">Enjoying Force Paster? ⭐</span>
-                <button class="close" aria-label="Dismiss">✕</button>
+                <button class="close" aria-label="Dismiss and don't ask again">✕</button>
             </div>
             <div class="body">You've used Force Paster for ${count} pastes. A quick rating helps others find it.</div>
             <div class="actions">
@@ -358,7 +358,8 @@ function showRatingToast(pasteCount) {
     shadow.querySelector('.btn-rate').addEventListener('click', () => respond('rate'));
     shadow.querySelector('.btn-later').addEventListener('click', () => respond('later'));
     shadow.querySelector('.btn-never').addEventListener('click', () => respond('never'));
-    shadow.querySelector('.close').addEventListener('click', () => respond('later'));
+    // Closing opts out; only the explicit Later choice schedules another prompt.
+    shadow.querySelector('.close').addEventListener('click', () => respond('never'));
 }
 
 function setCaretPositionToEndOfPastedText(elem, caretPos) {
