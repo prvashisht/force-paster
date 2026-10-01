@@ -5,9 +5,6 @@ BADGE_BG_ENABLED = "#518c60",
 BADGE_BG_DISABLED = "#ff0000";
 
 const RATING_THRESHOLD = 15;
-const RATING_SNOOZE_INITIAL = 15;
-const RATING_SNOOZE_MULTIPLIER = 1.5;
-const RATING_SNOOZE_CAP = 100;
 const RATING_STORE_URL = "https://vashis.ht/rd/forcepaster?from=forcepaster-extension-rating_prompt";
 
 function getPasteCountBucket(pasteCount) {
@@ -240,16 +237,16 @@ webext.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         }).catch(() => {});
         sendResponse({ ok: true });
     } else if (type === "ratingresponse") {
-        let ratingState, snoozeGap;
+        let ratingState;
         if (request.choice === "later") {
-            const currentGap = forcePasterSettings.snoozeGap ?? RATING_SNOOZE_INITIAL;
-            const nextGap = Math.min(Math.round(currentGap * RATING_SNOOZE_MULTIPLIER), RATING_SNOOZE_CAP);
-            ratingState = forcePasterSettings.pasteCount + nextGap;
-            snoozeGap = nextGap;
+            // Next prompt at ~1.4x lifetime usage, rounded up to the next 50.
+            ratingState = Math.ceil(
+                (forcePasterSettings.pasteCount * 1.4) / 50
+            ) * 50;
         } else {
             ratingState = "done";
         }
-        saveAndApplyExtensionDetails({ ratingState, ...(snoozeGap !== undefined && { snoozeGap }) });
+        saveAndApplyExtensionDetails({ ratingState });
         if (request.choice === "rate") {
             webext.tabs.create({ url: RATING_STORE_URL });
         }
