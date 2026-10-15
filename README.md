@@ -10,7 +10,7 @@ Force Paster is a browser extension that lets you paste text into any input fiel
 
 ## Features
 
-- **Force paste anywhere** — overrides paste-blocking for `<input>`, `<textarea>`, and supported `contenteditable` editors (including rich text and images where the site allows it)
+- **Force paste anywhere** — overrides paste-blocking for `<input>`, `<textarea>`, and supported `contenteditable` editors (including rich text and images where the site allows it); in inputs and textareas, Ctrl/Cmd+V and right-click → Paste work even on sites that cancel them
 - **One-click toggle** — click the extension icon to enable or disable; the toolbar badge shows the current state (`on` / `off`)
 - **Keyboard shortcut** — toggle with **Alt+Shift+P** on desktop (remappable per browser)
 - **Right-click context menu** — on desktop: toggle, open the dashboard, manage shortcuts, rate the extension, or report a bug from the toolbar icon
@@ -59,7 +59,8 @@ service_worker.js  ←─ action.onClicked / _execute_action / contextMenus (des
         │
         ▼  storage.onChanged
 content.js  (injected into every page / frame)
-  • document-level capture-phase `paste` listener (runs before site handlers)
+  • window-level capture-phase listeners, registered at document_start (run before any site handler)
+  • when isPasteEnabled: hides paste shortcuts and right-clicks in visible, editable inputs/textareas from the site, so it cannot cancel them
   • when isPasteEnabled: stops the site from blocking paste, then:
       – input/textarea: native value setter + input/change events
       – contenteditable: synthetic ClipboardEvent (MIME types + files), with fallbacks
@@ -93,7 +94,7 @@ All Chromium/Firefox API differences are centralised in `webext.js`. The service
 | `analytics.js` | GA4 proxy helper |
 | `build.sh` | Builds Chromium and Firefox zips under `dist/` |
 | `scripts/lint-firefox.sh` | Builds the Firefox zip and lints it with the same engine AMO uses |
-| `test-fixtures/` | Local pages for manual testing (e.g. paste-blocked demo) |
+| `test-fixtures/` | Local pages for manual testing (paste-blocked demo, bank-style on-screen keypad) |
 | `PRIVACY_POLICY.md` | Privacy policy |
 
 ---

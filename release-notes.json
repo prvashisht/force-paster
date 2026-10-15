@@ -1,6 +1,6 @@
 {
-  "version": "2.5.8",
+  "version": "2.5.9",
   "notes": [
-    "Fix paste failing on Gemini after the contenteditable duplicate-paste detection change"
+    "Paste now works on sites that cancel Ctrl/Cmd+V or turn off right-click, such as bank logins with an on-screen keypad"
   ]
 }

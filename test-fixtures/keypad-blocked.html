@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Force Paster — on-screen keypad test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 32rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.4; }
+    label { display: block; font-weight: 600; margin-top: 1.25rem; }
+    input { width: 100%; box-sizing: border-box; margin-top: 0.35rem; padding: 0.6rem; font-size: 1rem; }
+    button { margin-top: 0.75rem; padding: 0.5rem 0.9rem; font-size: 0.95rem; }
+    .hint { color: #555; font-size: 0.9rem; margin-top: 0.35rem; }
+    .status { margin-top: 1.5rem; padding: 0.75rem 1rem; background: #f3f3f3; border-radius: 8px; }
+  </style>
+</head>
+<!-- Right-click is disabled on the whole page, so the browser's Paste menu never opens. -->
+<body oncontextmenu="return false">
+  <h1>On-screen keypad test page</h1>
+  <p>Modelled on a bank login (AU Bank's netbanking). The field blocks paste, the page disables right-click, and while the on-screen keypad is open every key press is cancelled, so Ctrl+V never even becomes a paste. With Force Paster <strong>OFF</strong>, nothing pastes. With it <strong>ON</strong>, Ctrl/Cmd+V, Shift+Insert and right-click → Paste should all work, keypad open or not.</p>
+
+  <label for="password">Password</label>
+  <input id="password" type="password" autocomplete="off" placeholder="Try pasting here">
+  <p class="hint">Copy some text, click this field, paste. Then open the keypad and try again.</p>
+  <button type="button" id="keypad">Open on-screen keypad</button>
+
+  <div class="status" id="status">Form value: (empty)</div>
+
+  <script>
+    const field = document.getElementById('password');
+    const keypad = document.getElementById('keypad');
+
+    // The page's own form state, kept in sync from input events the way
+    // Angular / React / Vue forms do it.
+    field.addEventListener('input', () => {
+      document.getElementById('status').textContent = 'Form value: ' + (field.value || '(empty)');
+    });
+
+    // Paste, copy and cut are blocked on the field itself.
+    for (const type of ['paste', 'copy', 'cut']) {
+      field.addEventListener(type, (event) => event.preventDefault());
+    }
+
+    // While the keypad is open, every key press on the field is cancelled.
+    const cancelKey = (event) => event.preventDefault();
+    let keypadOpen = false;
+    keypad.addEventListener('click', () => {
+      keypadOpen = !keypadOpen;
+      if (keypadOpen) {
+        field.addEventListener('keydown', cancelKey);
+      } else {
+        field.removeEventListener('keydown', cancelKey);
+      }
+      keypad.textContent = keypadOpen ? 'Close on-screen keypad' : 'Open on-screen keypad';
+      field.focus();
+    });
+  </script>
+</body>
+</html>

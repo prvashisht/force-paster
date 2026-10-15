@@ -25,15 +25,49 @@ darkModePreference.addEventListener("change", darkModeListener);
 // set icons on initial load
 darkModeListener(darkModePreference);
 
-const isInputOrTextarea = (el) => ["input", "textarea"].includes(el.tagName.toLowerCase());
+const isInputOrTextarea = (el) => ["input", "textarea"].includes(el?.tagName?.toLowerCase());
 const isContentEditable = (el) => !!(el && el.isContentEditable);
+
+// A text field the user can see and type into. Web terminals and code editors
+// (xterm.js, CodeMirror, Monaco) read keys through a hidden helper textarea
+// and handle their own keys, so those don't count.
+const isVisibleTextField = (el) =>
+    isInputOrTextarea(el) && el.matches(':read-write') &&
+    el.offsetWidth > 1 && el.offsetHeight > 1 && getComputedStyle(el).opacity !== '0';
+
+// Cmd+V on macOS, Ctrl+V elsewhere (with or without Shift), and Shift+Insert:
+// the keys the browser turns into a native paste. keyCode catches V on
+// non-Latin layouts, where key is the local letter.
+const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+const isPasteShortcut = (e) =>
+    ((isMac ? e.metaKey : e.ctrlKey) && !e.altKey && (e.key?.toLowerCase() === 'v' || e.keyCode === 86)) ||
+    (e.shiftKey && e.key === 'Insert');
+
+// Some sites stop the paste event from ever firing: they cancel the Ctrl+V
+// keydown (AU Bank's netbanking does this while its on-screen keypad is open)
+// or the right-click menu (<body oncontextmenu="return false">). Hide those
+// events from the page without cancelling them, so the browser's own paste
+// goes ahead and the paste listener below takes over. Only real input counts:
+// a page's own synthetic events can't paste or open a menu anyway.
+window.addEventListener('keydown', event => {
+    if (!forcePasterSettings.isPasteEnabled || !event.isTrusted) return;
+    if (!isPasteShortcut(event) || !isVisibleTextField(document.activeElement)) return;
+    event.stopImmediatePropagation();
+}, true /* capture */);
+
+window.addEventListener('contextmenu', event => {
+    if (!forcePasterSettings.isPasteEnabled || !event.isTrusted) return;
+    if (!isVisibleTextField(event.target)) return;
+    event.stopImmediatePropagation();
+}, true /* capture */);
 
 let _syntheticPaste = false;
 
-// Capture phase at document level — runs before every page-registered listener
-// (both capture and bubble), so sites cannot block us with stopPropagation or
-// stopImmediatePropagation on their own handlers.
-document.addEventListener('paste', event => {
+// Capture phase on window, registered at document_start — runs before every
+// page-registered listener (window, document or element; capture or bubble),
+// so sites cannot block us with stopPropagation or stopImmediatePropagation
+// on their own handlers.
+window.addEventListener('paste', event => {
     if (!forcePasterSettings.isPasteEnabled) return;
     if (_syntheticPaste) return;
 
@@ -43,12 +77,16 @@ document.addEventListener('paste', event => {
 
     if (!isField && !isEditable) return;
 
+    // A paste event with no clipboard (a page's own bare `new Event('paste')`)
+    // has nothing for us to insert, so leave it alone.
+    const clipboardData = event.clipboardData || window.clipboardData || event.originalEvent?.clipboardData;
+    if (!clipboardData) return;
+
     // Seize the event — stop all other listeners (including the site's) from
     // seeing it, then cancel the browser's default paste behaviour.
     event.stopImmediatePropagation();
     event.preventDefault();
 
-    const clipboardData = event.clipboardData || window.clipboardData || event.originalEvent?.clipboardData;
     const pastedText = clipboardData.getData('Text');
 
     chrome.runtime.sendMessage({ type: "onpastestart", on: currEle.tagName.toLowerCase() });
